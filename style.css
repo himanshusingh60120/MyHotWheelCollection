@@ -27,6 +27,15 @@ h1 {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+.collection-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    font-size: 1.1em;
+    margin-top: 20px;
+    color: #f0f0f0;
+}
+
 .collection-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

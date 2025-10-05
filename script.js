@@ -10,9 +10,9 @@ const collectionContainer = document.querySelector('.collection-container');
 // --- Helper function to create a car card ---
 function createCarCard(car) {
     const finalImageUrl = car.Link || `https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}`;
-    const finalCarInfo = `
-        <p>Information: ${car.Information || 'No additional info provided.'}</p>
-    `;
+    
+    // Get the information for the back of the card
+    const carInfoContent = car.Information || 'No additional info provided.';
 
     return `
         <div class="car-card-container">
@@ -23,7 +23,7 @@ function createCarCard(car) {
                 </div>
                 <div class="card-back">
                     <div class="card-back-content">
-                        ${finalCarInfo}
+                        <p class="car-info">${carInfoContent}</p>
                     </div>
                 </div>
             </div>
@@ -94,5 +94,24 @@ async function fetchAndRenderCars() {
     }
 }
 
+// --- Helper function to create a car card ---
+function createCarCard(car) {
+    const finalImageUrl = car.Link || `https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}`;
+    const carInfoContent = car.Information || 'No additional info provided.';
+
+    return `
+        <div class="car-card-container">
+            <div class="card-front">
+                <div class="image-container">
+                    <img src="${finalImageUrl}" alt="${car["Car Model"]}">
+                    <div class="info-overlay">
+                        <p class="car-info">${carInfoContent}</p>
+                    </div>
+                </div>
+                <h2 class="car-name">${car["Car Model"]}</h2>
+            </div>
+        </div>
+    `;
+}
 // --- Initial Page Load ---
 fetchAndRenderCars();

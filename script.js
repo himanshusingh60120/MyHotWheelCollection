@@ -11,7 +11,7 @@ const collectionContainer = document.querySelector('.collection-container');
 function createCarCard(car) {
     const finalImageUrl = car.Link || `https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}`;
     const finalCarInfo = `
-        <p>${car.Information || 'No additional info provided.'}</p>
+        <p>Information: ${car.Information || 'No additional info provided.'}</p>
     `;
 
     return `
@@ -35,7 +35,7 @@ function createCarCard(car) {
 async function fetchAndRenderCars() {
     const range = 'Sheet1!A:F';
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${GOOGLE_API_KEY}`;
-    
+
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -50,7 +50,37 @@ async function fetchAndRenderCars() {
                 });
                 return obj;
             });
-            
+
+            // Calculate statistics
+            const totalCars = carList.length;
+
+            const removeCurrencyAndComma = (valueString) => {
+                return parseFloat(valueString.replace(/₹/g, '').replace(/,/g, '').trim());
+            };
+
+            const totalPriceAcquired = carList.reduce((sum, car) => {
+                const numericValue = removeCurrencyAndComma(car["Price Acquired"] || "0");
+                return sum + (isNaN(numericValue) ? 0 : numericValue);
+            }, 0);
+
+            const totalEstimatedValue = carList.reduce((sum, car) => {
+                const numericValue = removeCurrencyAndComma(car["Estimated Value (₹)"] || "0");
+                return sum + (isNaN(numericValue) ? 0 : numericValue);
+            }, 0);
+
+            // Create a number formatter for Indian Rupees
+            const formatter = new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+
+            // Update the display with the new statistics
+            document.getElementById('total-cars').textContent = totalCars;
+            document.getElementById('total-price-acquired').textContent = formatter.format(totalPriceAcquired);
+            document.getElementById('total-value').textContent = formatter.format(totalEstimatedValue);
+
             collectionContainer.innerHTML = '';
             carList.forEach(car => {
                 collectionContainer.innerHTML += createCarCard(car);

@@ -1,11 +1,10 @@
 /* Rock-Inspired Dark Theme */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #121212; /* Dark background */
-    color: #e0e0e0; /* Light text color */
+    background-color: #121212;
+    color: #e0e0e0;
     margin: 0;
     padding: 0;
-    /* Optional: Add a subtle rock-inspired background image */
     background-image: url('https://www.transparenttextures.com/patterns/dark-mosaic.png');
     background-attachment: fixed;
 }
@@ -23,7 +22,7 @@ h1 {
     font-size: 2.5em;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #f8c000; /* Rock-inspired accent color */
+    color: #f8c000;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -47,81 +46,75 @@ h1 {
 
 /* Card Styling */
 .car-card-container {
-    perspective: 1000px;
-    height: 300px; /* Kept fixed height for consistent card size */
-}
-
-.car-card {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.6s;
+    height: 300px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
     border-radius: 12px;
     overflow: hidden;
-}
-
-.car-card-container:hover .car-card {
-    transform: rotateY(180deg);
-}
-
-.card-front,
-.card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
-    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
 }
 
 .card-front {
     background-color: #2a2a2a;
     color: #f0f0f0;
-    z-index: 2;
-    pointer-events: none;
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
 }
 
-/* The corrected image sizing rules */
-.card-front img {
+.image-container {
     width: 100%;
-    height: 200px; /* Fixed height for consistent image container */
-    object-fit: contain; /* This will normalize the images to fit while preserving aspect ratio */
+    height: 200px;
+    position: relative;
+    overflow: hidden;
     border-radius: 8px;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-    background-color: #ffffff; /* This line adds a white background to the image container */
+    background-color: #ffffff;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
 .car-name {
-    margin: 0;
+    margin: 10px 0 0 0;
     font-size: 1.2em;
     text-align: center;
     font-weight: bold;
 }
 
-.card-back {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-    transform: rotateY(180deg);
+/* New styling for the slide-up overlay */
+.info-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     text-align: center;
-    border: 2px solid #555;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-    pointer-events: auto;
-}
-
-.card-back-content {
-    /* This new rule fixes the inverted text on the back of the card */
-    transform: rotateY(-180deg);
+    box-sizing: border-box;
+    padding: 10px;
 }
 
 .car-info {
+    margin: 0;
     font-size: 0.9em;
     line-height: 1.5;
+}
+
+.car-card-container:hover .info-overlay {
+    transform: translateY(0);
 }

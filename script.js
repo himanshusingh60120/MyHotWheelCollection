@@ -2,7 +2,7 @@
 
 // --- Google API & Spreadsheet Keys ---
 const GOOGLE_API_KEY = "AIzaSyCGB6F8rosJD_g4e6diqpplrdbkQsj-eQY";
-const SPREADSHEET_ID = "1yZ-aF0R42tPKLoc-5cZzrRYQsjW_elE2kAQq1Pwc7is";
+const SPREADSHEET_ID = "1n0xWyZzJ1lDRuAgy4prTy_FxEmzCls2IxcGn7pXKRWg";
 
 // --- DOM Element References ---
 const collectionContainer = document.querySelector('.collection-container');

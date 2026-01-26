@@ -7,6 +7,7 @@ const collectionContainer = document.querySelector('.collection-container');
 
 /**
  * Robust helper to convert currency strings into numbers.
+ * This strips symbols and commas to ensure math operations work.
  */
 const parseCurrency = (valueString) => {
     if (!valueString) return 0;
@@ -16,7 +17,7 @@ const parseCurrency = (valueString) => {
 
 /**
  * Creates the HTML structure for a single car card.
- * FIXED: Uses lowercase 'link' and 'info' to match your spreadsheet.
+ * Uses lowercase 'link' and 'info' to match the headers in your spreadsheet.
  */
 function createCarCard(car) {
     // Matches Column E: "link"
@@ -53,7 +54,8 @@ async function fetchAndRenderCars() {
         const rows = data.values;
 
         if (rows && rows.length > 1) {
-            const headers = rows[0];
+            // Clean headers by removing any accidental leading/trailing spaces
+            const headers = rows[0].map(h => h.trim()); 
             const carData = rows.slice(1);
             
             const carList = carData.map(row => {
@@ -67,7 +69,7 @@ async function fetchAndRenderCars() {
             // Calculate Statistics
             const totalCars = carList.length;
             
-            // Summing up columns
+            // Matches Column B: "Price Acquired" and Column C: "Estimated Value (₹)"
             const totalPriceAcquired = carList.reduce((sum, car) => sum + parseCurrency(car["Price Acquired"]), 0);
             const totalEstimatedValue = carList.reduce((sum, car) => sum + parseCurrency(car["Estimated Value (₹)"]), 0);
 

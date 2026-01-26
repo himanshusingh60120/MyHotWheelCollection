@@ -6,22 +6,24 @@ const SPREADSHEET_ID = "1n0xWyZzJ1lDRuAgy4prTy_FxEmzCls2IxcGn7pXKRWg";
 const collectionContainer = document.querySelector('.collection-container');
 
 /**
- * Robust helper to convert currency strings (like ₹500.00 or 1,200) into numbers.
- * This fixes the issue where "Total Price Acquired" was showing as 0.
+ * Robust helper to convert currency strings into numbers.
  */
 const parseCurrency = (valueString) => {
     if (!valueString) return 0;
-    // Removes everything except numbers and decimal points
     const numericValue = parseFloat(valueString.toString().replace(/[^0-9.]/g, ''));
     return isNaN(numericValue) ? 0 : numericValue;
 };
 
 /**
- * Creates the HTML structure for a single car card with the slide-up info overlay.
+ * Creates the HTML structure for a single car card.
+ * FIXED: Uses lowercase 'link' and 'info' to match your spreadsheet.
  */
 function createCarCard(car) {
-    const finalImageUrl = car.Link || `https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}`;
-    const carInfoContent = car.Information || 'No additional info provided.';
+    // Matches Column E: "link"
+    const finalImageUrl = car.link || `https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}`;
+    
+    // Matches Column F: "info"
+    const carInfoContent = car.info || 'No additional info provided.';
 
     return `
         <div class="car-card-container">
@@ -65,7 +67,7 @@ async function fetchAndRenderCars() {
             // Calculate Statistics
             const totalCars = carList.length;
             
-            // Summing up columns - ensure these header names match your Sheet exactly
+            // Summing up columns
             const totalPriceAcquired = carList.reduce((sum, car) => sum + parseCurrency(car["Price Acquired"]), 0);
             const totalEstimatedValue = carList.reduce((sum, car) => sum + parseCurrency(car["Estimated Value (₹)"]), 0);
 

@@ -11,7 +11,7 @@
 </head>
 <body>
 
-    <!-- ============ HERO: the loop-the-loop ============ -->
+    <!-- ============ HERO: the infinity circuit ============ -->
     <header class="page-header hero">
         <canvas id="hero-canvas" aria-hidden="true"></canvas>
 
@@ -21,19 +21,12 @@
             <p class="hero-tagline">1:64 scale cars. 1:1 scale obsession.</p>
         </div>
 
-        <!-- Stats dashboard — IDs unchanged, the sheet feeds these -->
+        <!-- The only stat we share. Valuations stay in the vault. -->
         <div class="collection-stats">
-            <div class="stat">
+            <div class="stat stat-solo">
                 <span class="stat-label">Cars in the garage</span>
                 <span class="stat-value" id="total-cars">0</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Damage to wallet</span>
-                <span class="stat-value money" id="total-price-acquired">₹0</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">What they're worth now</span>
-                <span class="stat-value money" id="total-value">₹0</span>
+                <span class="stat-sub">and counting. Send help. Or pegs.</span>
             </div>
         </div>
 
@@ -55,7 +48,6 @@
             <select id="sort-select" aria-label="Sort the collection">
                 <option value="sheet">Garage order</option>
                 <option value="name">Name A → Z</option>
-                <option value="value">Priciest first</option>
                 <option value="paid">Biggest splurge first</option>
             </select>
         </div>

@@ -3,26 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Diecast Collection</title>
+    <title>Himanshu's Hot Wheels Garage</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header class="page-header">
-        <h1>My Diecast Collection</h1>
+    <!-- ============ HERO: the loop-the-loop ============ -->
+    <header class="page-header hero">
+        <canvas id="hero-canvas" aria-hidden="true"></canvas>
+
+        <div class="hero-content">
+            <p class="hero-eyebrow">Est. in a blister pack near you</p>
+            <h1>Himanshu's<br><span class="accent">Hot&nbsp;Wheels</span> Garage</h1>
+            <p class="hero-tagline">1:64 scale cars. 1:1 scale obsession.</p>
+        </div>
+
+        <!-- Stats dashboard — IDs unchanged, the sheet feeds these -->
         <div class="collection-stats">
-            <p>Total Cars: <span id="total-cars">0</span></p>
-            <p>Total Price Acquired: <span id="total-price-acquired">0</span></p>
-            <p>Total Estimated Value: <span id="total-value">0</span></p>
+            <div class="stat">
+                <span class="stat-label">Cars in the garage</span>
+                <span class="stat-value" id="total-cars">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Damage to wallet</span>
+                <span class="stat-value money" id="total-price-acquired">₹0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">What they're worth now</span>
+                <span class="stat-value money" id="total-value">₹0</span>
+            </div>
+        </div>
+
+        <div class="scroll-hint" aria-hidden="true">
+            <span>Scroll into the pit lane</span>
+            <span class="scroll-arrow">▼</span>
         </div>
     </header>
 
-    <main class="collection-container">
-        </main>
+    <!-- ============ TOOLBAR ============ -->
+    <section class="toolbar">
+        <div class="toolbar-inner">
+            <input
+                type="search"
+                id="search-input"
+                placeholder="Search the garage… try 'GT' or 'Skyline'"
+                autocomplete="off"
+            >
+            <select id="sort-select" aria-label="Sort the collection">
+                <option value="sheet">Garage order</option>
+                <option value="name">Name A → Z</option>
+                <option value="value">Priciest first</option>
+                <option value="paid">Biggest splurge first</option>
+            </select>
+        </div>
+    </section>
 
+    <!-- ============ THE COLLECTION ============ -->
+    <main class="collection-container">
+        <!-- Cards land here. Sheet says vroom. -->
+    </main>
+
+    <p class="empty-note" id="empty-note" hidden>
+        No cars match that. Even the Ferraris are hiding. 🏁
+    </p>
+
+    <!-- ============ CAR DETAIL MODAL ============ -->
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+            <div class="modal-image-wrap">
+                <img id="modal-image" src="" alt="">
+            </div>
+            <div class="modal-body">
+                <h2 id="modal-title"></h2>
+                <p class="modal-verdict" id="modal-verdict"></p>
+                <div class="modal-specs" id="modal-specs"></div>
+                <p class="modal-info" id="modal-info"></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer">
+        <p>Built with caffeine and questionable financial decisions.</p>
+        <p>No cars were harmed. The blister packs weren't so lucky.</p>
+    </footer>
+
+    <!-- three.js first, then the garage brain -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

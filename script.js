@@ -43,67 +43,251 @@ const parseCurrency = (valueString) => {
 };
 
 // =====================================================================
-//  THREE.JS HERO — a diecast doing an eternal loop-the-loop
+//  THREE.JS HERO — a full circuit: drop-in, loop, booster, jump, GAP,
+//  landing, banked return. Three cars. Zero adult supervision.
 // =====================================================================
 (function initHero() {
     const canvas = document.getElementById('hero-canvas');
     if (!canvas || typeof THREE === 'undefined') return; // no canvas, no circus
 
+    // ---------- Scene basics ----------
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0d0e12, 14, 34);
+    scene.fog = new THREE.Fog(0x0d0e12, 26, 60);
 
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    camera.position.set(0, 0.6, 16);
+    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // --- Lights: garage fluorescents + a warm track glow ---
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    keyLight.position.set(6, 8, 10);
+    // ---------- Lights: garage fluorescents + neon accents ----------
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    keyLight.position.set(8, 14, 10);
     scene.add(keyLight);
-    const trackGlow = new THREE.PointLight(0xff5a1f, 1.2, 30);
-    trackGlow.position.set(0, 0, 4);
-    scene.add(trackGlow);
+    const loopGlow = new THREE.PointLight(0xff5a1f, 1.4, 28);
+    loopGlow.position.set(-4, 3, 4);
+    scene.add(loopGlow);
+    const coolGlow = new THREE.PointLight(0x2f7bff, 0.7, 30);
+    coolGlow.position.set(10, 4, -8);
+    scene.add(coolGlow);
 
-    // --- The famous orange loop ---
-    const LOOP_R = 5.2;
-    const loop = new THREE.Mesh(
-        new THREE.TorusGeometry(LOOP_R, 0.55, 20, 120),
-        new THREE.MeshStandardMaterial({ color: 0xff5a1f, roughness: 0.55, metalness: 0.1 })
+    // Everything track-related lives in one group so it can sway together
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // ---------- Ground: dark garage floor with a faint grid ----------
+    const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(45, 48),
+        new THREE.MeshStandardMaterial({ color: 0x101218, roughness: 1 })
     );
-    loop.scale.z = 0.28; // flatten the tube into a track ribbon
-    scene.add(loop);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.02;
+    world.add(floor);
 
-    // Inner rail stripe, because real track has that ridge
-    const rail = new THREE.Mesh(
-        new THREE.TorusGeometry(LOOP_R, 0.16, 12, 120),
-        new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.4 })
-    );
-    rail.scale.z = 0.9;
-    scene.add(rail);
+    const grid = new THREE.GridHelper(70, 35, 0x1e222c, 0x151820);
+    grid.position.y = 0;
+    world.add(grid);
 
-    // --- Build a tiny diecast out of primitives (forward = +x, up = +y) ---
-    function buildCar() {
+    // ---------- THE CIRCUIT ----------
+    // One closed spline. The cars follow ALL of it; the orange track is
+    // only drawn where there's plastic — the missing bit is the jump.
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    const controlPoints = [
+        // High start platform + drop-in
+        V(-13.0, 3.4, 1.0),
+        V(-10.5, 1.7, 0.6),
+        V(-8.4, 0.35, 0.2),
+        V(-6.4, 0.06, 0.0),
+        // Loop-the-loop (slight z-drift so the track doesn't clip itself)
+        V(-4.2, 0.06, 0.0),
+        V(-2.35, 1.95, -0.12),
+        V(-4.2, 3.8, -0.25),
+        V(-6.05, 1.95, -0.38),
+        V(-4.2, 0.06, -0.5),
+        // Flat run through the booster
+        V(-2.0, 0.05, -0.38),
+        V(0.6, 0.05, -0.2),
+        // Jump ramp
+        V(2.3, 0.5, -0.08),
+        V(3.3, 1.2, 0.0),
+        // *** THE GAP *** (pure air — no track gets drawn here)
+        V(4.9, 2.0, 0.0),
+        V(6.5, 1.55, 0.0),
+        // Landing ramp + run-out
+        V(7.7, 0.8, 0.0),
+        V(9.2, 0.08, 0.0),
+        V(11.2, 0.06, -0.6),
+        // Banked sweeper back
+        V(13.2, 0.5, -3.0),
+        V(13.4, 0.6, -6.2),
+        V(10.5, 0.25, -8.8),
+        V(5.5, 0.1, -9.8),
+        V(0.0, 0.3, -10.1),
+        V(-5.5, 0.6, -9.5),
+        // Climb back to the start platform
+        V(-10.2, 1.7, -7.6),
+        V(-13.6, 2.6, -4.2),
+        V(-14.2, 3.3, -1.2),
+    ];
+    const curve = new THREE.CatmullRomCurve3(controlPoints, true, 'catmullrom', 0.5);
+
+    // ---------- Frames along the curve (smooth, no flipping) ----------
+    const SEGS = 900;
+    const frames = curve.computeFrenetFrames(SEGS, true);
+    const N = frames.tangents.length;
+    const pts = [];
+    for (let i = 0; i < N; i++) pts.push(curve.getPointAt(i / (N - 1)));
+
+    // Parallel-transport frames start with an arbitrary twist —
+    // rotate the whole frame field so "up" at the start is actually up.
+    (function alignFrames() {
+        const t0 = frames.tangents[0];
+        const up = new THREE.Vector3(0, 1, 0);
+        const desired = up.clone().sub(t0.clone().multiplyScalar(up.dot(t0))).normalize();
+        const n0 = frames.normals[0];
+        const angle = Math.atan2(new THREE.Vector3().crossVectors(n0, desired).dot(t0), n0.dot(desired));
+        for (let i = 0; i < N; i++) {
+            frames.normals[i].applyAxisAngle(frames.tangents[i], angle);
+            frames.binormals[i].applyAxisAngle(frames.tangents[i], angle);
+        }
+    })();
+
+    // Which samples are the gap? (the airborne stretch after the ramp lip)
+    const isGap = pts.map(p => p.x > 3.45 && p.x < 7.55 && p.z > -2.5 && p.y > 0.4);
+
+    // ---------- Build the orange track ribbon + yellow rails ----------
+    const HALF_W = 0.42;
+    const trackMat = new THREE.MeshStandardMaterial({
+        color: 0xff5a1f, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide,
+    });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.4, metalness: 0.3 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x262a33, roughness: 0.8 });
+
+    function buildRun(indices) {
+        // Ribbon
+        const pos = [], norm = [], idx = [];
+        indices.forEach((i, k) => {
+            const p = pts[i], b = frames.binormals[i], n = frames.normals[i];
+            const L = p.clone().addScaledVector(b, HALF_W);
+            const R = p.clone().addScaledVector(b, -HALF_W);
+            pos.push(L.x, L.y, L.z, R.x, R.y, R.z);
+            norm.push(n.x, n.y, n.z, n.x, n.y, n.z);
+            if (k > 0) {
+                const a = (k - 1) * 2;
+                idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+            }
+        });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
+        geo.setIndex(idx);
+        world.add(new THREE.Mesh(geo, trackMat));
+
+        // Side rails (every 3rd point keeps the spline light)
+        [HALF_W, -HALF_W].forEach(side => {
+            const railPts = [];
+            for (let k = 0; k < indices.length; k += 3) {
+                const i = indices[k];
+                railPts.push(
+                    pts[i].clone()
+                        .addScaledVector(frames.binormals[i], side)
+                        .addScaledVector(frames.normals[i], 0.06)
+                );
+            }
+            if (railPts.length < 2) return;
+            const railCurve = new THREE.CatmullRomCurve3(railPts);
+            world.add(new THREE.Mesh(
+                new THREE.TubeGeometry(railCurve, railPts.length * 2, 0.055, 6, false),
+                railMat
+            ));
+        });
+
+        // Support pillars under anything elevated (sells the "plastic track" look)
+        for (let k = 0; k < indices.length; k += 26) {
+            const i = indices[k];
+            const p = pts[i];
+            if (p.y < 0.55) continue;
+            // Don't prop up the inside of the loop
+            const inLoop = p.x > -6.6 && p.x < -1.8 && p.y > 0.5 && p.z > -1.2 && p.y < 3.2;
+            if (inLoop && p.y < 3.0) continue;
+            const h = p.y - 0.05;
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, h, 8), pillarMat);
+            pillar.position.set(p.x, h / 2, p.z);
+            world.add(pillar);
+        }
+    }
+
+    // Split the closed sample loop into contiguous runs of actual track,
+    // starting just after the gap so no run wraps the seam.
+    let gapStart = isGap.indexOf(true);
+    if (gapStart < 0) gapStart = 0;
+    let run = [];
+    for (let s = 0; s <= N; s++) {
+        const i = (gapStart + s) % N;
+        if (!isGap[i]) {
+            run.push(i);
+        } else if (run.length > 1) {
+            buildRun(run);
+            run = [];
+        }
+    }
+    if (run.length > 1) buildRun(run);
+
+    // ---------- Turbo booster on the flat (spinning yellow wheels) ----------
+    const spinners = [];
+    (function buildBooster() {
+        // Find the nearest on-track sample to the flat section
+        const target = V(0.6, 0.05, -0.2);
+        let best = 0, bestD = Infinity;
+        for (let i = 0; i < N; i++) {
+            if (isGap[i]) continue;
+            const d = pts[i].distanceToSquared(target);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        const p = pts[best], b = frames.binormals[best], t = frames.tangents[best];
+
+        const boost = new THREE.Group();
+        [1, -1].forEach(side => {
+            const spin = new THREE.Group();
+            const wheel = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.28, 0.28, 0.16, 16),
+                railMat
+            );
+            spin.add(wheel);
+            spin.position.copy(p)
+                .addScaledVector(b, side * (HALF_W + 0.22))
+                .add(V(0, 0.3, 0));
+            boost.add(spin);
+            spinners.push(spin);
+
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.34, 8), pillarMat);
+            post.position.copy(spin.position).add(V(0, -0.22, 0));
+            boost.add(post);
+        });
+        // Arch over the top, because drama
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, (HALF_W + 0.42) * 2), trackMat);
+        arch.position.copy(p).add(V(0, 0.72, 0));
+        arch.lookAt(p.clone().add(t));
+        boost.add(arch);
+        world.add(boost);
+    })();
+
+    // ---------- The racers ----------
+    function buildCar(paintColor) {
         const car = new THREE.Group();
-
-        const paint = new THREE.MeshStandardMaterial({ color: 0x2f7bff, roughness: 0.25, metalness: 0.7 });
+        const paint = new THREE.MeshStandardMaterial({ color: paintColor, roughness: 0.25, metalness: 0.7 });
         const glass = new THREE.MeshStandardMaterial({ color: 0x0d0e12, roughness: 0.15, metalness: 0.9 });
         const tyre  = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.9 });
         const rim   = new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.3, metalness: 0.8 });
 
-        // Body
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.34, 0.8), paint);
         body.position.y = 0.28;
         car.add(body);
 
-        // Cabin
         const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.3, 0.68), glass);
         cabin.position.set(-0.1, 0.58, 0);
         car.add(cabin);
 
-        // Rear spoiler — obviously
         const spoiler = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.85), paint);
         spoiler.position.set(-0.82, 0.62, 0);
         car.add(spoiler);
@@ -111,7 +295,6 @@ const parseCurrency = (valueString) => {
         strut.position.set(-0.8, 0.5, 0);
         car.add(strut);
 
-        // Wheels: each in a spin-group so the axle math stays sane
         const wheels = [];
         [[0.55, 0.42], [0.55, -0.42], [-0.55, 0.42], [-0.55, -0.42]].forEach(([x, z]) => {
             const spin = new THREE.Group();
@@ -125,41 +308,67 @@ const parseCurrency = (valueString) => {
             wheels.push(spin);
         });
 
+        car.scale.setScalar(0.72);
         return { car, wheels };
     }
 
-    // Pivot spins around the loop; car rides the *inside* like a champ
-    const pivot = new THREE.Group();
-    const { car, wheels } = buildCar();
-    car.position.set(0, LOOP_R - 0.62, 0);
-    car.rotation.z = Math.PI; // roof toward the center, wheels on the track
-    pivot.add(car);
-    scene.add(pivot);
+    const racers = [
+        { color: 0x2f7bff, offset: 0.00, lane:  0.13 },  // blue — the favourite
+        { color: 0xff3b3b, offset: 0.38, lane: -0.13 },  // red — the rival
+        { color: 0x2dd4a7, offset: 0.72, lane:  0.00 },  // teal — the wildcard
+    ].map(cfg => {
+        const built = buildCar(cfg.color);
+        world.add(built.car);
+        return { ...cfg, ...built };
+    });
 
-    // --- Drifting dust/spark particles ---
+    // Pose a car at parameter u (0..1) along the circuit
+    const _fwd = new THREE.Vector3(), _up = new THREE.Vector3(), _right = new THREE.Vector3();
+    const _pos = new THREE.Vector3(), _m = new THREE.Matrix4();
+    function poseCar(racer, u) {
+        u = ((u % 1) + 1) % 1;
+        const f = u * (N - 1);
+        const i0 = Math.floor(f), i1 = (i0 + 1) % N, blend = f - i0;
+
+        _up.copy(frames.normals[i0]).lerp(frames.normals[i1], blend).normalize();
+        _fwd.copy(frames.tangents[i0]).lerp(frames.tangents[i1], blend).normalize();
+        // Re-orthogonalise up against forward
+        _up.addScaledVector(_fwd, -_up.dot(_fwd)).normalize();
+        _right.crossVectors(_fwd, _up);
+
+        _pos.copy(pts[i0]).lerp(pts[i1], blend)
+            .addScaledVector(_up, 0.03)
+            .addScaledVector(frames.binormals[i0], racer.lane);
+
+        racer.car.position.copy(_pos);
+        _m.makeBasis(_fwd, _up, _right);
+        racer.car.quaternion.setFromRotationMatrix(_m);
+    }
+
+    // ---------- Drifting spark particles ----------
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 220;
+    const starCount = 180;
     const positions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-        positions[i]     = (Math.random() - 0.5) * 40;
-        positions[i + 1] = (Math.random() - 0.5) * 24;
-        positions[i + 2] = (Math.random() - 0.5) * 18 - 4;
+        positions[i]     = (Math.random() - 0.5) * 60;
+        positions[i + 1] = Math.random() * 16;
+        positions[i + 2] = (Math.random() - 0.5) * 40 - 5;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const stars = new THREE.Points(
         starGeo,
-        new THREE.PointsMaterial({ color: 0xff8a50, size: 0.05, transparent: true, opacity: 0.7 })
+        new THREE.PointsMaterial({ color: 0xff8a50, size: 0.07, transparent: true, opacity: 0.5 })
     );
     scene.add(stars);
 
-    // --- Mouse parallax ---
+    // ---------- Camera, parallax, resize ----------
     const mouse = { x: 0, y: 0 };
     window.addEventListener('mousemove', (e) => {
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
     });
 
-    // --- Keep it crisp on resize ---
+    let camDist = 21, camHeight = 7.5;
     function resize() {
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (canvas.width !== w || canvas.height !== h) {
@@ -167,28 +376,39 @@ const parseCurrency = (valueString) => {
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
         }
+        // Pull back on narrow screens so the whole circuit stays in frame
+        const a = camera.aspect;
+        camDist = a > 1.6 ? 20 : a > 1.1 ? 25 : a > 0.8 ? 31 : 38;
+        camHeight = a > 1.1 ? 7.5 : 9;
     }
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clock = new THREE.Clock();
+    const LAP_SECONDS = 13;
 
     function animate() {
         requestAnimationFrame(animate);
         resize();
 
         const t = clock.getElapsedTime();
+        const drive = reduceMotion ? 0 : t / LAP_SECONDS;
+
+        racers.forEach((r, i) => {
+            poseCar(r, drive + r.offset);
+            if (!reduceMotion) r.wheels.forEach(w => (w.rotation.z = t * 16 + i));
+        });
+
         if (!reduceMotion) {
-            pivot.rotation.z = -t * 0.9;                 // the eternal lap
-            wheels.forEach(w => (w.rotation.z = t * 14)); // tyre smoke sold separately
-            loop.rotation.y = Math.sin(t * 0.25) * 0.18;  // lazy showroom sway
-            rail.rotation.y = loop.rotation.y;
-            stars.rotation.y = t * 0.02;
+            spinners.forEach(s => (s.rotation.y = t * 18));
+            world.rotation.y = Math.sin(t * 0.2) * 0.05;   // lazy showroom sway
+            stars.rotation.y = t * 0.015;
         }
 
-        // Parallax drift toward the cursor
-        camera.position.x += ((mouse.x * 1.6) - camera.position.x) * 0.04;
-        camera.position.y += ((-mouse.y * 1.0 + 0.6) - camera.position.y) * 0.04;
-        camera.lookAt(0, 0, 0);
+        // Parallax drift toward the cursor; scene sits low so the title breathes
+        camera.position.x = 0.5 + mouse.x * 2.2;
+        camera.position.y = camHeight - mouse.y * 1.2;
+        camera.position.z = camDist;
+        camera.lookAt(0, -0.4, -3.5);
 
         renderer.render(scene, camera);
     }

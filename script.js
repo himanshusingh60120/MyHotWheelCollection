@@ -43,8 +43,9 @@ const parseCurrency = (valueString) => {
 };
 
 // =====================================================================
-//  THREE.JS HERO — a full circuit: drop-in, loop, booster, jump, GAP,
-//  landing, banked return. Three cars. Zero adult supervision.
+//  THREE.JS HERO — one flowing infinity circuit:
+//  flyover bridge → loop ornament → far sweep → kicker jump →
+//  underpass → elevated colonnade → back over the bridge. Repeat forever.
 // =====================================================================
 (function initHero() {
     const canvas = document.getElementById('hero-canvas');
@@ -52,30 +53,30 @@ const parseCurrency = (valueString) => {
 
     // ---------- Scene basics ----------
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0d0e12, 26, 60);
+    scene.fog = new THREE.Fog(0x0d0e12, 24, 52);
 
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // ---------- Lights: garage fluorescents + neon accents ----------
+    // ---------- Lights: warm key + neon accents ----------
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
     keyLight.position.set(8, 14, 10);
     scene.add(keyLight);
-    const loopGlow = new THREE.PointLight(0xff5a1f, 1.4, 28);
-    loopGlow.position.set(-4, 3, 4);
+    const loopGlow = new THREE.PointLight(0xff5a1f, 1.3, 26);
+    loopGlow.position.set(6, 3, 6);
     scene.add(loopGlow);
-    const coolGlow = new THREE.PointLight(0x2f7bff, 0.7, 30);
-    coolGlow.position.set(10, 4, -8);
+    const coolGlow = new THREE.PointLight(0x2f7bff, 0.6, 30);
+    coolGlow.position.set(-9, 4, -6);
     scene.add(coolGlow);
 
     // Everything track-related lives in one group so it can sway together
     const world = new THREE.Group();
     scene.add(world);
 
-    // ---------- Ground: dark garage floor with a faint grid ----------
+    // ---------- Floor: dark, with a soft warm pool of light ----------
     const floor = new THREE.Mesh(
         new THREE.CircleGeometry(45, 48),
         new THREE.MeshStandardMaterial({ color: 0x101218, roughness: 1 })
@@ -84,50 +85,68 @@ const parseCurrency = (valueString) => {
     floor.position.y = -0.02;
     world.add(floor);
 
-    const grid = new THREE.GridHelper(70, 35, 0x1e222c, 0x151820);
-    grid.position.y = 0;
-    world.add(grid);
+    // Radial glow under the circuit (skipped gracefully if unavailable)
+    if (typeof document.createElement === 'function') {
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        const ctx = c.getContext('2d');
+        const g = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+        g.addColorStop(0, 'rgba(255, 110, 40, 0.55)');
+        g.addColorStop(0.55, 'rgba(255, 90, 31, 0.16)');
+        g.addColorStop(1, 'rgba(255, 90, 31, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 256, 256);
+        const glow = new THREE.Mesh(
+            new THREE.PlaneGeometry(34, 22),
+            new THREE.MeshBasicMaterial({
+                map: new THREE.CanvasTexture(c),
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+            })
+        );
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = 0.0;
+        world.add(glow);
+    }
 
-    // ---------- THE CIRCUIT ----------
-    // One closed spline. The cars follow ALL of it; the orange track is
-    // only drawn where there's plastic — the missing bit is the jump.
+    // ---------- THE CIRCUIT: a figure-eight that never stops flowing ----------
+    // One closed spline. The cars follow ALL of it; the orange track is only
+    // drawn where there's plastic — the small missing bit is the kicker jump.
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
     const controlPoints = [
-        // High start platform + drop-in
-        V(-13.0, 3.4, 1.0),
-        V(-10.5, 1.7, 0.6),
-        V(-8.4, 0.35, 0.2),
-        V(-6.4, 0.06, 0.0),
-        // Loop-the-loop (slight z-drift so the track doesn't clip itself)
-        V(-4.2, 0.06, 0.0),
-        V(-2.35, 1.95, -0.12),
-        V(-4.2, 3.8, -0.25),
-        V(-6.05, 1.95, -0.38),
-        V(-4.2, 0.06, -0.5),
-        // Flat run through the booster
-        V(-2.0, 0.05, -0.38),
-        V(0.6, 0.05, -0.2),
-        // Jump ramp
-        V(2.3, 0.5, -0.08),
-        V(3.3, 1.2, 0.0),
-        // *** THE GAP *** (pure air — no track gets drawn here)
-        V(4.9, 2.0, 0.0),
-        V(6.5, 1.55, 0.0),
-        // Landing ramp + run-out
-        V(7.7, 0.8, 0.0),
-        V(9.2, 0.08, 0.0),
-        V(11.2, 0.06, -0.6),
-        // Banked sweeper back
-        V(13.2, 0.5, -3.0),
-        V(13.4, 0.6, -6.2),
-        V(10.5, 0.25, -8.8),
-        V(5.5, 0.1, -9.8),
-        V(0.0, 0.3, -10.1),
-        V(-5.5, 0.6, -9.5),
-        // Climb back to the start platform
-        V(-10.2, 1.7, -7.6),
-        V(-13.6, 2.6, -4.2),
-        V(-14.2, 3.3, -1.2),
+        // Flyover bridge — the crown of the circuit
+        V(0.0, 1.75, 0.0),
+        // Sweep down into the right lobe
+        V(2.6, 0.9, 1.9),
+        V(4.4, 0.18, 2.9),
+        // The loop ornament (slight z-drift so it never clips itself)
+        V(6.0, 0.08, 3.0),
+        V(7.15, 1.25, 2.9),
+        V(6.0, 2.4, 2.8),
+        V(4.85, 1.25, 2.7),
+        V(6.0, 0.08, 2.6),
+        // Out to the far right sweep
+        V(8.3, 0.12, 2.1),
+        V(10.3, 0.2, 0.5),
+        V(10.3, 0.22, -1.6),
+        // Kicker jump on the back straight
+        V(8.6, 0.55, -3.0),
+        // *** the little flight ***
+        V(6.9, 0.9, -3.15),
+        // Landing
+        V(5.1, 0.45, -2.95),
+        V(2.8, 0.18, -1.9),
+        // Underneath the bridge
+        V(0.0, 0.05, 0.0),
+        // Left lobe: a long, rising, elevated sweep on a colonnade
+        V(-4.5, 0.45, 2.9),
+        V(-8.0, 0.8, 3.2),
+        V(-10.3, 1.15, 1.4),
+        V(-10.3, 1.3, -1.4),
+        V(-8.0, 1.45, -3.1),
+        V(-4.5, 1.6, -2.6),
+        // …and back up onto the bridge. Closed.
     ];
     const curve = new THREE.CatmullRomCurve3(controlPoints, true, 'catmullrom', 0.5);
 
@@ -152,16 +171,16 @@ const parseCurrency = (valueString) => {
         }
     })();
 
-    // Which samples are the gap? (the airborne stretch after the ramp lip)
-    const isGap = pts.map(p => p.x > 3.45 && p.x < 7.55 && p.z > -2.5 && p.y > 0.4);
+    // Which samples are the jump? (the short airborne stretch on the back straight)
+    const isGap = pts.map(p => p.z < -2.35 && p.x > 5.6 && p.x < 8.3);
 
     // ---------- Build the orange track ribbon + yellow rails ----------
     const HALF_W = 0.42;
     const trackMat = new THREE.MeshStandardMaterial({
-        color: 0xff5a1f, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide,
+        color: 0xff5a1f, roughness: 0.5, metalness: 0.1, side: THREE.DoubleSide,
     });
     const railMat = new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.4, metalness: 0.3 });
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x262a33, roughness: 0.8 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x2a2e38, roughness: 0.8 });
 
     function buildRun(indices) {
         // Ribbon
@@ -202,15 +221,16 @@ const parseCurrency = (valueString) => {
             ));
         });
 
-        // Support pillars under anything elevated (sells the "plastic track" look)
-        for (let k = 0; k < indices.length; k += 26) {
+        // Support pillars under anything elevated — the colonnade look
+        for (let k = 0; k < indices.length; k += 22) {
             const i = indices[k];
             const p = pts[i];
-            if (p.y < 0.55) continue;
-            // Don't prop up the inside of the loop
-            const inLoop = p.x > -6.6 && p.x < -1.8 && p.y > 0.5 && p.z > -1.2 && p.y < 3.2;
-            if (inLoop && p.y < 3.0) continue;
-            const h = p.y - 0.05;
+            if (p.y < 0.5) continue;
+            // Keep the loop's interior and the underpass clear
+            const inLoopZone = p.x > 4.4 && p.x < 7.7 && p.z > 2.2;
+            const inCrossover = Math.abs(p.x) < 1.4 && Math.abs(p.z) < 1.4;
+            if (inLoopZone || inCrossover) continue;
+            const h = p.y - 0.04;
             const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, h, 8), pillarMat);
             pillar.position.set(p.x, h / 2, p.z);
             world.add(pillar);
@@ -233,11 +253,10 @@ const parseCurrency = (valueString) => {
     }
     if (run.length > 1) buildRun(run);
 
-    // ---------- Turbo booster on the flat (spinning yellow wheels) ----------
+    // ---------- Turbo booster before the loop (spinning yellow wheels) ----------
     const spinners = [];
     (function buildBooster() {
-        // Find the nearest on-track sample to the flat section
-        const target = V(0.6, 0.05, -0.2);
+        const target = V(3.6, 0.3, 2.75);
         let best = 0, bestD = Infinity;
         for (let i = 0; i < N; i++) {
             if (isGap[i]) continue;
@@ -250,23 +269,22 @@ const parseCurrency = (valueString) => {
         [1, -1].forEach(side => {
             const spin = new THREE.Group();
             const wheel = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.28, 0.28, 0.16, 16),
+                new THREE.CylinderGeometry(0.26, 0.26, 0.16, 16),
                 railMat
             );
             spin.add(wheel);
             spin.position.copy(p)
-                .addScaledVector(b, side * (HALF_W + 0.22))
-                .add(V(0, 0.3, 0));
+                .addScaledVector(b, side * (HALF_W + 0.2))
+                .add(V(0, 0.28, 0));
             boost.add(spin);
             spinners.push(spin);
 
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.34, 8), pillarMat);
-            post.position.copy(spin.position).add(V(0, -0.22, 0));
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8), pillarMat);
+            post.position.copy(spin.position).add(V(0, -0.2, 0));
             boost.add(post);
         });
-        // Arch over the top, because drama
-        const arch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, (HALF_W + 0.42) * 2), trackMat);
-        arch.position.copy(p).add(V(0, 0.72, 0));
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, (HALF_W + 0.4) * 2), trackMat);
+        arch.position.copy(p).add(V(0, 0.68, 0));
         arch.lookAt(p.clone().add(t));
         boost.add(arch);
         world.add(boost);
@@ -308,14 +326,14 @@ const parseCurrency = (valueString) => {
             wheels.push(spin);
         });
 
-        car.scale.setScalar(0.72);
+        car.scale.setScalar(0.7);
         return { car, wheels };
     }
 
     const racers = [
-        { color: 0x2f7bff, offset: 0.00, lane:  0.13 },  // blue — the favourite
-        { color: 0xff3b3b, offset: 0.38, lane: -0.13 },  // red — the rival
-        { color: 0x2dd4a7, offset: 0.72, lane:  0.00 },  // teal — the wildcard
+        { color: 0x2f7bff, offset: 0.00, lane:  0.12 },  // blue — the favourite
+        { color: 0xff3b3b, offset: 0.34, lane: -0.12 },  // red — the rival
+        { color: 0x2dd4a7, offset: 0.67, lane:  0.00 },  // teal — the wildcard
     ].map(cfg => {
         const built = buildCar(cfg.color);
         world.add(built.car);
@@ -345,19 +363,19 @@ const parseCurrency = (valueString) => {
         racer.car.quaternion.setFromRotationMatrix(_m);
     }
 
-    // ---------- Drifting spark particles ----------
+    // ---------- A few drifting sparks, kept quiet ----------
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 180;
+    const starCount = 120;
     const positions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-        positions[i]     = (Math.random() - 0.5) * 60;
-        positions[i + 1] = Math.random() * 16;
-        positions[i + 2] = (Math.random() - 0.5) * 40 - 5;
+        positions[i]     = (Math.random() - 0.5) * 50;
+        positions[i + 1] = Math.random() * 14;
+        positions[i + 2] = (Math.random() - 0.5) * 34 - 4;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const stars = new THREE.Points(
         starGeo,
-        new THREE.PointsMaterial({ color: 0xff8a50, size: 0.07, transparent: true, opacity: 0.5 })
+        new THREE.PointsMaterial({ color: 0xff8a50, size: 0.06, transparent: true, opacity: 0.4 })
     );
     scene.add(stars);
 
@@ -368,7 +386,7 @@ const parseCurrency = (valueString) => {
         mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
     });
 
-    let camDist = 21, camHeight = 7.5;
+    let camDist = 17, camHeight = 6.6;
     function resize() {
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (canvas.width !== w || canvas.height !== h) {
@@ -378,13 +396,13 @@ const parseCurrency = (valueString) => {
         }
         // Pull back on narrow screens so the whole circuit stays in frame
         const a = camera.aspect;
-        camDist = a > 1.6 ? 20 : a > 1.1 ? 25 : a > 0.8 ? 31 : 38;
-        camHeight = a > 1.1 ? 7.5 : 9;
+        camDist = a > 1.6 ? 16.5 : a > 1.1 ? 20 : a > 0.8 ? 26 : 32;
+        camHeight = a > 1.1 ? 6.6 : 8;
     }
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clock = new THREE.Clock();
-    const LAP_SECONDS = 13;
+    const LAP_SECONDS = 12;
 
     function animate() {
         requestAnimationFrame(animate);
@@ -400,15 +418,15 @@ const parseCurrency = (valueString) => {
 
         if (!reduceMotion) {
             spinners.forEach(s => (s.rotation.y = t * 18));
-            world.rotation.y = Math.sin(t * 0.2) * 0.05;   // lazy showroom sway
-            stars.rotation.y = t * 0.015;
+            world.rotation.y = Math.sin(t * 0.18) * 0.08;   // lazy showroom sway
+            stars.rotation.y = t * 0.012;
         }
 
         // Parallax drift toward the cursor; scene sits low so the title breathes
-        camera.position.x = 0.5 + mouse.x * 2.2;
-        camera.position.y = camHeight - mouse.y * 1.2;
+        camera.position.x = 0.3 + mouse.x * 2.0;
+        camera.position.y = camHeight - mouse.y * 1.1;
         camera.position.z = camDist;
-        camera.lookAt(0, -0.4, -3.5);
+        camera.lookAt(0, 0.5, 0);
 
         renderer.render(scene, camera);
     }
@@ -432,7 +450,7 @@ function countUp(el, target, isMoney) {
 }
 
 // =====================================================================
-//  CARD RENDERING
+//  CARD RENDERING — blister pack front, spec-card back
 // =====================================================================
 
 /**
@@ -448,80 +466,58 @@ function createCarCard(car, index) {
 
     return `
         <div class="car-card-container" data-index="${index}" style="--i:${index}" tabindex="0" role="button" aria-label="View ${car["Car Model"]}">
-            <div class="card-front">
-                <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
-                <div class="image-container">
-                    <img src="${finalImageUrl}" alt="${car["Car Model"]}" loading="lazy"
-                         onerror="this.onerror=null;this.src='https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}';">
-                    <div class="info-overlay">
-                        <p class="car-info">${carInfoContent}</p>
-                        <span class="overlay-cta">Tap for the full spec sheet →</span>
+            <div class="card-inner">
+                <div class="card-face card-face-front">
+                    <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
+                    <div class="image-container">
+                        <img src="${finalImageUrl}" alt="${car["Car Model"]}" loading="lazy"
+                             onerror="this.onerror=null;this.src='https://placehold.co/300x200?text=${encodeURIComponent(car["Car Model"])}';">
                     </div>
+                    <h2 class="car-name">${car["Car Model"]}</h2>
+                    <span class="flip-hint">hover</span>
                 </div>
-                <h2 class="car-name">${car["Car Model"]}</h2>
-                <div class="card-glare"></div>
+                <div class="card-face card-face-back">
+                    <span class="card-number back">#${String(index + 1).padStart(2, '0')}</span>
+                    <h2 class="car-name">${car["Car Model"]}</h2>
+                    <p class="car-info">${carInfoContent}</p>
+                    <span class="overlay-cta">Tap for the full spec sheet →</span>
+                </div>
             </div>
         </div>
     `;
 }
 
-// 3D tilt: cards lean into your cursor like they're taking a corner
-function attachTilt(cardEl) {
-    const inner = cardEl.querySelector('.card-front');
-    const glare = cardEl.querySelector('.card-glare');
-
-    cardEl.addEventListener('mousemove', (e) => {
-        const rect = cardEl.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / rect.width;
-        const py = (e.clientY - rect.top) / rect.height;
-        const rx = (0.5 - py) * 12;
-        const ry = (px - 0.5) * 14;
-        inner.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.03)`;
-        if (glare) {
-            glare.style.opacity = '1';
-            glare.style.background =
-                `radial-gradient(circle at ${px * 100}% ${py * 100}%, rgba(255,255,255,0.18), transparent 55%)`;
-        }
-    });
-
-    cardEl.addEventListener('mouseleave', () => {
-        inner.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
-        if (glare) glare.style.opacity = '0';
-    });
-}
-
 // =====================================================================
-//  MODAL — the full spec sheet, with a financial verdict
+//  MODAL — the full spec sheet (estimated values stay in the vault)
 // =====================================================================
+const TAGLINES = [
+    'Certified shelf royalty.',
+    'Does 0–60 in one wrist flick.',
+    'Undefeated on the dining table circuit.',
+    'Mint-ish. The "ish" has stories.',
+    'Chosen over groceries at least once.',
+    'Loud paint, louder personality.',
+    'Survived the great shelf earthquake.',
+    'The pegs never saw it coming.',
+];
+
 function openModal(car) {
     const name = car["Car Model"] || 'Unnamed legend';
     modalTitle.textContent = name;
     modalImage.src = car.link || `https://placehold.co/600x400?text=${encodeURIComponent(name)}`;
     modalImage.alt = name;
 
-    const paid = parseCurrency(car["Price Acquired"]);
-    const worth = parseCurrency(car["Estimated Value (₹)"]);
-    const diff = worth - paid;
+    // A tagline instead of a valuation — the accountant is off duty
+    let seed = 0;
+    for (let i = 0; i < name.length; i++) seed += name.charCodeAt(i);
+    modalVerdict.textContent = TAGLINES[seed % TAGLINES.length];
 
-    // The verdict: was this an investment or an "investment"?
-    let verdict;
-    if (paid === 0 && worth === 0) {
-        verdict = 'Value: sentimental. Which is priceless. Which is convenient.';
-    } else if (diff > 0) {
-        verdict = `Up ${formatter.format(diff)}. Better returns than my mutual funds. 📈`;
-    } else if (diff < 0) {
-        verdict = `Down ${formatter.format(Math.abs(diff))}. We call this one "an emotional asset". 📉`;
-    } else {
-        verdict = 'Breaking exactly even. Suspiciously responsible.';
-    }
-    modalVerdict.textContent = verdict;
-
-    // Spec rows: show every sheet column except the ones already displayed
-    const skip = new Set(['Car Model', 'link', 'info']);
+    // Spec rows: everything from the sheet EXCEPT what's private or shown already
+    const skip = new Set(['Car Model', 'link', 'info', 'Estimated Value (₹)']);
     let specsHTML = '';
     Object.keys(car).forEach((key) => {
         if (skip.has(key) || !car[key]) return;
-        const isMoneyCol = key === 'Price Acquired' || key === 'Estimated Value (₹)';
+        const isMoneyCol = key === 'Price Acquired';
         const val = isMoneyCol ? formatter.format(parseCurrency(car[key])) : car[key];
         specsHTML += `
             <div class="spec-row">
@@ -564,9 +560,6 @@ function getVisibleCars() {
         case 'name':
             list = [...list].sort((a, b) => (a["Car Model"] || '').localeCompare(b["Car Model"] || ''));
             break;
-        case 'value':
-            list = [...list].sort((a, b) => parseCurrency(b["Estimated Value (₹)"]) - parseCurrency(a["Estimated Value (₹)"]));
-            break;
         case 'paid':
             list = [...list].sort((a, b) => parseCurrency(b["Price Acquired"]) - parseCurrency(a["Price Acquired"]));
             break;
@@ -584,9 +577,8 @@ function renderCards() {
         collectionContainer.innerHTML += createCarCard(car, i);
     });
 
-    // Wire up tilt + modal after the HTML lands
+    // Wire up modal after the HTML lands (the flip is pure CSS)
     collectionContainer.querySelectorAll('.car-card-container').forEach((cardEl, i) => {
-        attachTilt(cardEl);
         const open = () => openModal(list[i]);
         cardEl.addEventListener('click', open);
         cardEl.addEventListener('keydown', (e) => {
@@ -634,17 +626,8 @@ async function fetchAndRenderCars() {
                 return obj;
             });
 
-            // Calculate Statistics
-            const totalCars = carList.length;
-
-            // Matches Column B: "Price Acquired" and Column C: "Estimated Value (₹)"
-            const totalPriceAcquired = carList.reduce((sum, car) => sum + parseCurrency(car["Price Acquired"]), 0);
-            const totalEstimatedValue = carList.reduce((sum, car) => sum + parseCurrency(car["Estimated Value (₹)"]), 0);
-
-            // Update UI Stats — with a rev-up instead of a teleport
-            countUp(document.getElementById('total-cars'), totalCars, false);
-            countUp(document.getElementById('total-price-acquired'), totalPriceAcquired, true);
-            countUp(document.getElementById('total-value'), totalEstimatedValue, true);
+            // The only public stat: how deep the obsession goes
+            countUp(document.getElementById('total-cars'), carList.length, false);
 
             // Render Cards
             allCars = carList;

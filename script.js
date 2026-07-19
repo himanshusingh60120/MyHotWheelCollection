@@ -1,9 +1,9 @@
 // =====================================================================
-//  HIMANSHU'S HOT WHEELS GARAGE — NEON SHOWROOM EDITION
+//  THE HOT WHEELS GARAGE — SEALED VAULT EDITION
 //  Data plumbing untouched. Everything else got a spoiler and neons.
 // =====================================================================
 
-// --- Google API & Spreadsheet Keys (DO NOT TOUCH — the garage runs on these) ---
+// --- Google API & Spreadsheet Keys (DO NOT TOUCH — the vault runs on these) ---
 const GOOGLE_API_KEY = "AIzaSyCGB6F8rosJD_g4e6diqpplrdbkQsj-eQY";
 const SPREADSHEET_ID = "1n0xWyZzJ1lDRuAgy4prTy_FxEmzCls2IxcGn7pXKRWg";
 
@@ -53,82 +53,92 @@ const parseCurrency = (valueString) => {
 // =====================================================================
 //  SCROLL STATE — one source of truth the whole page listens to
 // =====================================================================
-const scrollState = { y: 0, progress: 0, heroProgress: 0, boost: 0 };
+const scrollState = { y: 0, progress: 0, boost: 0, vel: 0, smoothVel: 0 };
 
 (function initScroll() {
     let lastY = window.scrollY || 0;
+    const heroContent = document.getElementById('hero-content');
+    const fill = document.getElementById('progress-fill');
+    const car = document.getElementById('progress-car');
+    const wheels = car ? car.querySelectorAll('.pwheel') : [];
+    const ghost = document.querySelector('.ghost');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function onScroll() {
         const y = window.scrollY || 0;
         const docH = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        scrollState.vel = y - lastY;
         scrollState.y = y;
         scrollState.progress = Math.min(y / docH, 1);
-        scrollState.heroProgress = Math.min(y / Math.max(window.innerHeight, 1), 1);
 
         // Scrolling revs the engines — the trails surge with scroll velocity
-        scrollState.boost = Math.min(4, scrollState.boost + Math.abs(y - lastY) * 0.004);
+        scrollState.boost = Math.min(4, scrollState.boost + Math.abs(scrollState.vel) * 0.004);
         lastY = y;
 
-        // Progress car drives across the top of the page
-        const fill = document.getElementById('progress-fill');
-        const car = document.getElementById('progress-car');
+        // Progress car commutes across the top of the page
         if (fill) fill.style.width = (scrollState.progress * 100) + '%';
         if (car) {
             car.style.left = `calc(${(scrollState.progress * 100).toFixed(2)}% - ${(scrollState.progress * 44).toFixed(0)}px)`;
-            car.querySelectorAll('.pwheel').forEach(w => {
-                w.style.transform = `rotate(${(y * 1.4) % 360}deg)`;
-            });
+            wheels.forEach(w => { w.style.transform = `rotate(${(y * 1.4) % 360}deg)`; });
         }
 
-        // Hero content parallax: title cruises up and fades as you leave
-        const heroContent = document.getElementById('hero-content');
+        // Hero parallax: the poster cruises up and fades as you leave
         if (heroContent) {
-            const p = scrollState.heroProgress;
-            heroContent.style.transform = `translateY(${(-p * 90).toFixed(1)}px)`;
-            heroContent.style.opacity = String(Math.max(0, 1 - p * 1.35));
+            const p = Math.min(y / Math.max(window.innerHeight, 1), 1);
+            heroContent.style.transform = `translateY(${(-p * 80).toFixed(1)}px)`;
+            heroContent.style.opacity = String(Math.max(0, 1 - p * 1.3));
         }
+
+        // Ghost type drifts slower than the page — cheap depth
+        if (ghost) ghost.style.transform = `translateY(${(y * -0.06).toFixed(1)}px)`;
+    }
+
+    // Velocity skew: the grid leans into hard scrolls, then settles
+    function settle() {
+        requestAnimationFrame(settle);
+        if (reduceMotion || !collectionContainer) return;
+        scrollState.smoothVel += (scrollState.vel - scrollState.smoothVel) * 0.12;
+        scrollState.vel *= 0.86;
+        const skew = Math.max(-1.4, Math.min(1.4, scrollState.smoothVel * 0.03));
+        collectionContainer.style.transform = `skewY(${skew.toFixed(3)}deg)`;
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+    settle();
 })();
 
 // =====================================================================
-//  THREE.JS HERO — neon light trails streaking through a dark showroom.
-//  Mouse steers the camera. Scroll dollies in and revs the trails.
+//  THREE.JS BACKDROP — neon light trails behind the ENTIRE page.
+//  Mouse steers. Scroll dollies the camera and revs the trails.
 // =====================================================================
 (function initHero() {
-    const canvas = document.getElementById('hero-canvas');
+    const canvas = document.getElementById('bg-canvas');
     if (!canvas || typeof THREE === 'undefined') return; // no canvas, no circus
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0d0e12, 16, 64);
+    scene.fog = new THREE.Fog(0x0d0e12, 16, 66);
 
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Everything sway-able lives in one group
     const world = new THREE.Group();
     scene.add(world);
 
-    // ---------- Synthwave horizon: a fading grid far below ----------
+    // ---------- Synthwave horizon ----------
     const grid = new THREE.GridHelper(160, 80, 0x27304a, 0x151a26);
     grid.position.y = -5;
     world.add(grid);
 
     // ---------- The light trails ----------
-    // Sweeping curves crossing the scene; a glowing comet races along each.
     const PALETTE = [0xff5a1f, 0xffc400, 0x2f7bff, 0xff5a1f, 0x2dd4a7, 0xff3b3b];
     const TRAILS = [];
-    const TAIL = 16; // comet segments
-
-    // Shared geometry for comet segments
+    const TAIL = 16;
     const cometGeo = new THREE.SphereGeometry(0.24, 10, 10);
 
     for (let j = 0; j < 6; j++) {
-        // Hand-tuned sweeps: enter left, swoosh through, exit right
         const pts = [];
         const depth = -3 - j * 2.4;
         const amp = 2.2 + (j % 3) * 1.1;
@@ -160,7 +170,6 @@ const scrollState = { y: 0, progress: 0, heroProgress: 0, boost: 0 };
         );
         world.add(halo);
 
-        // The comet: a bright head with a fading tail
         const segs = [];
         for (let i = 0; i < TAIL; i++) {
             const m = new THREE.Mesh(
@@ -225,7 +234,6 @@ const scrollState = { y: 0, progress: 0, heroProgress: 0, boost: 0 };
         resize();
 
         const t = clock.getElapsedTime();
-        const dt = Math.min(clock.getDelta ? 0.016 : 0.016, 0.05);
         const rev = 1 + scrollState.boost;           // scroll = throttle
         scrollState.boost *= 0.94;                    // ease back off
 
@@ -238,16 +246,16 @@ const scrollState = { y: 0, progress: 0, heroProgress: 0, boost: 0 };
                     tr.segs[i].position.copy(tr.curve.getPointAt(u));
                 }
             });
-            world.rotation.y = Math.sin(t * 0.1) * 0.05 + scrollState.heroProgress * 0.35;
+            world.rotation.y = Math.sin(t * 0.1) * 0.05 + scrollState.progress * 0.7;
             stars.rotation.y = t * 0.008;
         }
 
-        // Scroll dollies the camera into the trail field
-        const dolly = scrollState.heroProgress;
+        // Scrolling the page descends the camera through the trail field
+        const p = scrollState.progress;
         camera.position.x = mouse.x * 2.4;
-        camera.position.y = 3.4 - mouse.y * 1.4 - dolly * 1.2;
-        camera.position.z = 20 - dolly * 9;
-        camera.lookAt(0, 3, -6);
+        camera.position.y = 3.4 - mouse.y * 1.4 - p * 4.2;
+        camera.position.z = 20 - p * 7;
+        camera.lookAt(0, 2.6 - p * 3.4, -6);
 
         renderer.render(scene, camera);
     }
@@ -271,7 +279,7 @@ function countUp(el, target, isMoney) {
 }
 
 // =====================================================================
-//  CARD RENDERING — studio showroom cards, nothing cropped, ever
+//  CARD RENDERING — uniform modules, whole car always visible
 // =====================================================================
 
 /**
@@ -280,7 +288,7 @@ function countUp(el, target, isMoney) {
  */
 function createCarCard(car, index) {
     // Matches Column E: "link"
-    const finalImageUrl = car.link || `https://placehold.co/600x450?text=${encodeURIComponent(car["Car Model"])}`;
+    const finalImageUrl = car.link || `https://placehold.co/600x800?text=${encodeURIComponent(car["Car Model"])}`;
 
     // Matches Column B: "Price Acquired" — the only number a card shares
     const paid = parseCurrency(car["Price Acquired"]);
@@ -291,16 +299,17 @@ function createCarCard(car, index) {
     return `
         <div class="car-card-container reveal" data-index="${index}" style="--i:${index % 12}" tabindex="0" role="button" aria-label="View ${car["Car Model"]}">
             <div class="card-shell">
-                <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
                 <div class="image-container">
+                    <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
+                    <span class="seal-badge" title="Mint On Card. Obviously.">MOC ✓</span>
                     <img src="${finalImageUrl}" alt="${car["Car Model"]}" loading="lazy"
-                         onerror="this.onerror=null;this.src='https://placehold.co/600x450?text=${encodeURIComponent(car["Car Model"])}';">
+                         onerror="this.onerror=null;this.src='https://placehold.co/600x800?text=${encodeURIComponent(car["Car Model"])}';">
                 </div>
                 <div class="card-meta">
-                    <h2 class="car-name">${car["Car Model"]}</h2>
+                    <h3 class="car-name">${car["Car Model"]}</h3>
                     <div class="card-row">
                         <span class="price-chip">${paidChip}</span>
-                        <span class="card-cta">specs →</span>
+                        <span class="card-cta">spec sheet →</span>
                     </div>
                 </div>
             </div>
@@ -325,7 +334,7 @@ function observeReveals() {
                 revealObserver.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
     items.forEach(el => revealObserver.observe(el));
 }
 
@@ -339,23 +348,23 @@ function attachSpotlight(cardEl) {
 }
 
 // =====================================================================
-//  MODAL — the full spec sheet (per-car estimated value stays private)
+//  MODAL — whitelisted spec sheet. Price Acquired only, nothing leaks.
 // =====================================================================
 const TAGLINES = [
     'Certified shelf royalty.',
-    'Does 0–60 in one wrist flick.',
+    'Does 0–60 in one wrist flick. Theoretically. It\'s sealed.',
     'Undefeated on the dining table circuit.',
-    'Mint-ish. The "ish" has stories.',
+    'Mint on card. Monk-level restraint.',
     'Chosen over groceries at least once.',
     'Loud paint, louder personality.',
-    'Survived the great shelf earthquake.',
+    'Never touched grass. Or floor. Or air.',
     'The pegs never saw it coming.',
 ];
 
 function openModal(car) {
     const name = car["Car Model"] || 'Unnamed legend';
     modalTitle.textContent = name;
-    modalImage.src = car.link || `https://placehold.co/600x400?text=${encodeURIComponent(name)}`;
+    modalImage.src = car.link || `https://placehold.co/600x800?text=${encodeURIComponent(name)}`;
     modalImage.alt = name;
 
     // A tagline instead of a valuation — the accountant is off duty
@@ -363,20 +372,19 @@ function openModal(car) {
     for (let i = 0; i < name.length; i++) seed += name.charCodeAt(i);
     modalVerdict.textContent = TAGLINES[seed % TAGLINES.length];
 
-    // Spec rows: everything from the sheet EXCEPT what's private or shown already
-    const skip = new Set(['Car Model', 'link', 'info', 'Estimated Value (₹)']);
-    let specsHTML = '';
-    Object.keys(car).forEach((key) => {
-        if (skip.has(key) || !car[key]) return;
-        const isMoneyCol = key === 'Price Acquired';
-        const val = isMoneyCol ? formatter.format(parseCurrency(car[key])) : car[key];
-        specsHTML += `
-            <div class="spec-row">
-                <span class="spec-key">${key}</span>
-                <span class="spec-val">${val}</span>
-            </div>`;
-    });
-    modalSpecs.innerHTML = specsHTML;
+    // WHITELIST: only these rows ever render, no matter what the sheet holds
+    const rows = [];
+    const paid = parseCurrency(car["Price Acquired"]);
+    if (paid > 0) rows.push(['Price acquired', formatter.format(paid)]);
+    rows.push(['Condition', 'Sealed — Mint On Card']);
+    rows.push(['Scale', '1:64']);
+
+    modalSpecs.innerHTML = rows.map(([k, v]) => `
+        <div class="spec-row">
+            <span class="spec-key">${k}</span>
+            <span class="spec-val">${v}</span>
+        </div>`).join('');
+
     modalInfo.textContent = car.info || '';
 
     modalBackdrop.hidden = false;
@@ -414,7 +422,7 @@ function getVisibleCars() {
         case 'paid':
             list = [...list].sort((a, b) => parseCurrency(b["Price Acquired"]) - parseCurrency(a["Price Acquired"]));
             break;
-        // 'sheet' keeps garage order
+        // 'sheet' keeps vault order
     }
     return list;
 }
@@ -425,7 +433,7 @@ function updateLineupCount(shown) {
     if (shown === total) {
         lineupCount.textContent = `All ${total} legends, present and polished.`;
     } else if (shown === 0) {
-        lineupCount.textContent = `0 of ${total}. The garage denies everything.`;
+        lineupCount.textContent = `0 of ${total}. The vault denies everything.`;
     } else {
         lineupCount.textContent = `${shown} of ${total} answered the call.`;
     }
@@ -472,7 +480,7 @@ async function fetchAndRenderCars() {
     collectionContainer.innerHTML = `
         <div class="loading-state">
             <div class="loading-wheel"></div>
-            <p>Rolling the garage door up…</p>
+            <p>Unlocking the vault…</p>
         </div>`;
 
     try {

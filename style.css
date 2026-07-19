@@ -298,10 +298,10 @@ h1 em {
 
 .collection-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-    gap: 26px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
     padding: 30px 24px 56px;
-    max-width: 1150px;
+    max-width: 1240px;
     margin: 0 auto;
     perspective: 1400px;
 }
@@ -392,19 +392,17 @@ h1 em {
     border-radius: 14px;
     background: #ffffff;
     border: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
     overflow: hidden;
 }
 
+/* cover = the photo fills the whole frame identically on every card.
+   White-background images blend into the white frame, so the crop is invisible
+   and every car reads at the same scale in the same area. */
 .image-container img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
     display: block;
     transition: transform 0.4s cubic-bezier(0.22, 1, 0.3, 1);
 }
@@ -670,8 +668,16 @@ h1 em {
 
 /* ============ RESPONSIVE + MOTION ============ */
 
+@media (max-width: 1000px) {
+    .collection-container { grid-template-columns: repeat(3, 1fr); }
+}
+
 @media (max-width: 900px) {
     .bento { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 720px) {
+    .collection-container { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
@@ -679,6 +685,10 @@ h1 em {
     .bento { grid-template-columns: 1fr 1fr; gap: 10px; }
     .tile { padding: 16px 16px 14px; }
     .lineup-head { padding-top: 36px; }
+}
+
+@media (max-width: 460px) {
+    .collection-container { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {

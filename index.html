@@ -1,170 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Himanshu's Hot Wheels Garage</title>
-<meta name="description" content="A logbook of 1:64 scale cars, tracked to the last rupee.">
-<link rel="stylesheet" href="style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Himanshu's Hot Wheels Garage</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- ============ DRAW RAIL: a pen line that tracks your scroll ============ -->
-<div class="draw-rail" aria-hidden="true">
-    <svg viewBox="0 0 40 400" preserveAspectRatio="none">
-        <path id="rail-path" class="rail-path"
-              d="M20,2 C34,40 6,80 20,120 C34,160 6,200 20,240 C34,280 6,320 20,360 C28,378 14,392 20,398"
-              pathLength="1000"/>
-    </svg>
-    <svg class="rail-car" viewBox="0 0 70 40">
-        <use href="#doodle-car-shape"/>
-    </svg>
-</div>
-
-<!-- ============ HERO ============ -->
-<header class="hero" id="hero">
-    <div class="aura-blob" id="aura-blob" aria-hidden="true"></div>
-
-    <svg class="hero-doodle wobble" viewBox="0 0 1200 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs>
-            <path id="doodle-track"
-                d="M150,320 C130,180 380,140 560,255 C720,355 940,330 1000,240
-                   C1050,165 990,110 910,150 C845,182 860,280 720,320
-                   C560,366 420,430 280,400 C160,374 168,400 150,320 Z"/>
-            <g id="doodle-car-shape">
-                <path d="M4 30 Q4 18 16 16 L24 8 Q36 2 48 8 L56 16 Q70 18 70 30 Z"
-                      class="car-body" stroke="#0b1712" stroke-width="3.5" stroke-linejoin="round"/>
-                <path d="M27 9 L39 9 L44 15 L23 15 Z" fill="#0b1712" opacity="0.35"/>
-                <circle cx="20" cy="32" r="7.5" fill="#0b1712" stroke="#0b1712" stroke-width="3"/>
-                <circle cx="20" cy="32" r="2.6" fill="var(--lime)"/>
-                <circle cx="54" cy="32" r="7.5" fill="#0b1712" stroke="#0b1712" stroke-width="3"/>
-                <circle cx="54" cy="32" r="2.6" fill="var(--lime)"/>
-            </g>
-        </defs>
-
-        <use href="#doodle-track" class="track-glow"/>
-        <use href="#doodle-track" class="track-line" id="track-line"/>
-
-        <g class="hero-car" fill="var(--lime)">
-            <use href="#doodle-car-shape"/>
-            <animateMotion dur="13s" begin="2.4s" repeatCount="indefinite" rotate="auto">
-                <mpath href="#doodle-track"/>
-            </animateMotion>
-        </g>
-        <g class="hero-car" fill="var(--pink)">
-            <use href="#doodle-car-shape"/>
-            <animateMotion dur="13s" begin="9s" repeatCount="indefinite" rotate="auto">
-                <mpath href="#doodle-track"/>
-            </animateMotion>
-        </g>
-
-        <g class="floaty" style="--fd:.2s">
-            <path d="M1080,90 l7,18 19,2 -14,13 4,19 -16,-9 -16,9 4,-19 -14,-13 19,-2 Z"
-                  fill="none" stroke="var(--lime)" stroke-width="3.5" stroke-linejoin="round"/>
-        </g>
-        <g class="floaty" style="--fd:.9s">
-            <text x="960" y="500" class="doodle-text" transform="rotate(-6 960 500)">vroom.</text>
-        </g>
-        <g class="floaty" style="--fd:.5s">
-            <text x="70" y="540" class="doodle-text small" transform="rotate(5 70 540)">no brakes ✦</text>
-        </g>
-        <g class="floaty" style="--fd:1.3s">
-            <path d="M560,70 q13,-24 26,0 q13,24 26,0" fill="none" stroke="var(--cyan)" stroke-width="3.5" stroke-linecap="round"/>
-        </g>
-        <g class="floaty" style="--fd:1.7s">
-            <circle cx="200" cy="80" r="4" fill="var(--pink)"/>
-            <circle cx="222" cy="66" r="2.5" fill="var(--lime)"/>
-        </g>
-    </svg>
-
-    <div class="hero-content">
-        <p class="hero-eyebrow">pit-wall log &middot; updated obsessively</p>
-        <h1>Himanshu's<br><span class="accent">Hot&nbsp;Wheels</span> Garage</h1>
-        <p class="hero-tagline">1:64 scale cars. Full-scale addiction.</p>
-    </div>
-
-    <div class="stats" role="group" aria-label="Collection stats">
-        <div class="stat-tile" style="--tilt:-3deg">
-            <span class="tape"></span>
-            <span class="stat-label">Cars logged</span>
-            <span class="stat-value" id="stat-cars">0</span>
-            <span class="stat-sub">and somehow still "just one more"</span>
-        </div>
-        <div class="stat-tile" style="--tilt:2deg">
-            <span class="tape"></span>
-            <span class="stat-label">Total spent</span>
-            <span class="stat-value money" id="stat-spent">₹0</span>
-            <span class="stat-sub">no regrets, several receipts</span>
-        </div>
-        <div class="stat-tile" style="--tilt:-1.5deg">
-            <span class="tape"></span>
-            <span class="stat-label">Current aura (est.)</span>
-            <span class="stat-value money" id="stat-aura">₹0</span>
-            <span class="stat-sub">self-graded, undefeated</span>
+    <!-- ============ SCROLL PROGRESS: a car drives across the top ============ -->
+    <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progress-fill"></div>
+        <div class="progress-car" id="progress-car">
+            <svg viewBox="0 0 64 32" width="40" height="20">
+                <path d="M4 22 L8 14 Q10 10 16 10 L26 10 Q30 4 38 4 L44 4 Q50 4 52 10 L58 12 Q62 14 62 18 L62 22 Z" fill="#ff5a1f"/>
+                <path d="M28 10 L38 6 L44 6 Q48 6 49 10 Z" fill="#0d0e12"/>
+                <g class="pwheel" style="transform-origin: 18px 24px;"><circle cx="18" cy="24" r="6" fill="#15161a"/><circle cx="18" cy="24" r="2.6" fill="#ffc400"/><rect x="17.3" y="19" width="1.4" height="4" fill="#0d0e12"/></g>
+                <g class="pwheel" style="transform-origin: 48px 24px;"><circle cx="48" cy="24" r="6" fill="#15161a"/><circle cx="48" cy="24" r="2.6" fill="#ffc400"/><rect x="47.3" y="19" width="1.4" height="4" fill="#0d0e12"/></g>
+            </svg>
         </div>
     </div>
 
-    <p class="scroll-cue">the pen's not done yet <span>↓</span></p>
-</header>
+    <!-- ============ HERO: neon light-trail showroom ============ -->
+    <header class="page-header hero" id="hero">
+        <canvas id="hero-canvas" aria-hidden="true"></canvas>
 
-<!-- ============ TICKER ============ -->
-<div class="ticker" aria-hidden="true">
-    <div class="ticker-track">
-        <span>★ logged not lost ★ 1:64 forever ★ shelf royalty ★ pit-pass verified ★ mint-ish, ask no questions ★ aura: immaculate ★ zero regrets, mostly ★&nbsp;</span>
-        <span>★ logged not lost ★ 1:64 forever ★ shelf royalty ★ pit-pass verified ★ mint-ish, ask no questions ★ aura: immaculate ★ zero regrets, mostly ★&nbsp;</span>
-    </div>
-</div>
+        <div class="hero-content" id="hero-content">
+            <p class="hero-eyebrow">// collector build — est. in a blister pack near you</p>
+            <h1>Himanshu's<br><span class="accent">Hot&nbsp;Wheels</span> Garage</h1>
+            <p class="hero-tagline">1:64 scale cars. 1:1 scale obsession. Scroll to rev the engines.</p>
 
-<!-- ============ TOOLBAR ============ -->
-<section class="toolbar">
-    <div class="toolbar-inner">
-        <input type="search" id="search-input" placeholder="Search the lineup… try 'GT' or a colour" autocomplete="off">
-        <select id="sort-select" aria-label="Sort the collection">
-            <option value="sheet">Shelf order</option>
-            <option value="name">A → Z</option>
-            <option value="paid">Priciest first</option>
-        </select>
-    </div>
-</section>
+            <!-- The ledger. Same IDs the sheet has always fed. -->
+            <div class="collection-stats">
+                <div class="stat">
+                    <span class="stat-label">Cars in the garage</span>
+                    <span class="stat-value" id="total-cars">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Damage to wallet</span>
+                    <span class="stat-value money" id="total-price-acquired">₹0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">What the shelf is worth</span>
+                    <span class="stat-value money" id="total-value">₹0</span>
+                </div>
+            </div>
+        </div>
 
-<!-- ============ COLLECTION ============ -->
-<div class="section-head">
-    <h2 class="section-title">The Lineup</h2>
-    <svg class="squiggle" data-draw viewBox="0 0 260 20" aria-hidden="true">
-        <path d="M4,12 q16,-14 32,0 t32,0 t32,0 t32,0 t32,0 t32,0 t32,0 t28,0"
-              pathLength="1000" fill="none" stroke="var(--lime)" stroke-width="4.5" stroke-linecap="round"/>
-    </svg>
-</div>
+        <div class="scroll-hint" aria-hidden="true">
+            <span>Scroll into the pit lane</span>
+            <span class="scroll-arrow">▼</span>
+        </div>
+    </header>
 
-<main class="cards" id="cards">
-    <!-- Cards land here. -->
-</main>
+    <!-- ============ TOOLBAR ============ -->
+    <section class="toolbar">
+        <div class="toolbar-inner">
+            <input
+                type="search"
+                id="search-input"
+                placeholder="Search the garage… try 'GT' or 'Skyline'"
+                autocomplete="off"
+            >
+            <select id="sort-select" aria-label="Sort the collection">
+                <option value="sheet">Garage order</option>
+                <option value="name">Name A → Z</option>
+                <option value="paid">Biggest splurge first</option>
+            </select>
+        </div>
+    </section>
 
-<p class="empty-note" id="empty-note" hidden>Nothing matches. Even the rare ones are hiding. 🏁</p>
+    <!-- ============ THE LINEUP ============ -->
+    <section class="lineup-head">
+        <h2>The Lineup</h2>
+        <p id="lineup-count">Warming up…</p>
+    </section>
 
-<!-- ============ MODAL ============ -->
-<div class="modal-backdrop" id="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
-        <div class="modal-image-wrap"><img id="modal-image" src="" alt=""></div>
-        <div class="modal-body">
-            <h2 id="modal-title"></h2>
-            <p class="modal-tagline" id="modal-tagline"></p>
-            <p class="modal-paid" id="modal-paid"></p>
-            <div class="modal-specs" id="modal-specs"></div>
-            <p class="modal-info" id="modal-info"></p>
+    <main class="collection-container">
+        <!-- Cards land here. Sheet says vroom. -->
+    </main>
+
+    <p class="empty-note" id="empty-note" hidden>
+        No cars match that. Even the Ferraris are hiding. 🏁
+    </p>
+
+    <!-- ============ CAR DETAIL MODAL ============ -->
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+            <div class="modal-image-wrap">
+                <img id="modal-image" src="" alt="">
+            </div>
+            <div class="modal-body">
+                <h2 id="modal-title"></h2>
+                <p class="modal-verdict" id="modal-verdict"></p>
+                <div class="modal-specs" id="modal-specs"></div>
+                <p class="modal-info" id="modal-info"></p>
+            </div>
         </div>
     </div>
-</div>
 
-<footer class="page-footer">
-    <p>Logged with love, questionable budgeting, and zero regrets.</p>
-    <p>No cars were harmed. The blister packs did not survive.</p>
-</footer>
+    <footer class="page-footer">
+        <p>Built with caffeine and questionable financial decisions.</p>
+        <p>No cars were harmed. The blister packs weren't so lucky.</p>
+    </footer>
 
-<script src="script.js"></script>
+    <!-- three.js first, then the garage brain -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

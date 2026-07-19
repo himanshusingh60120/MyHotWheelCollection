@@ -1,6 +1,6 @@
 // =====================================================================
-//  THE HOT WHEELS GARAGE — SEALED VAULT EDITION
-//  Data plumbing untouched. Everything else got a spoiler and neons.
+//  THE 1:64 VAULT — a Hot Wheels collection
+//  Data plumbing untouched. Everything else got reupholstered.
 // =====================================================================
 
 // --- Google API & Spreadsheet Keys (DO NOT TOUCH — the vault runs on these) ---
@@ -37,6 +37,9 @@ const chipFormatter = new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
 });
 
+// Columns that never get displayed anywhere on the site
+const PRIVATE_COLUMNS = new Set(['Estimated Value (₹)', 'Collection Value']);
+
 // Full car list lives here after fetch, so search/sort don't re-hit the API
 let allCars = [];
 
@@ -53,164 +56,152 @@ const parseCurrency = (valueString) => {
 // =====================================================================
 //  SCROLL STATE — one source of truth the whole page listens to
 // =====================================================================
-const scrollState = { y: 0, progress: 0, boost: 0, vel: 0, smoothVel: 0 };
+const scrollState = { y: 0, progress: 0, boost: 0 };
 
 (function initScroll() {
     let lastY = window.scrollY || 0;
-    const heroContent = document.getElementById('hero-content');
-    const fill = document.getElementById('progress-fill');
-    const car = document.getElementById('progress-car');
-    const wheels = car ? car.querySelectorAll('.pwheel') : [];
-    const ghost = document.querySelector('.ghost');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function onScroll() {
         const y = window.scrollY || 0;
         const docH = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-        scrollState.vel = y - lastY;
         scrollState.y = y;
         scrollState.progress = Math.min(y / docH, 1);
 
-        // Scrolling revs the engines — the trails surge with scroll velocity
-        scrollState.boost = Math.min(4, scrollState.boost + Math.abs(scrollState.vel) * 0.004);
+        // Scrolling stirs the backdrop — the floating cards flutter
+        scrollState.boost = Math.min(3, scrollState.boost + Math.abs(y - lastY) * 0.003);
         lastY = y;
 
         // Progress car commutes across the top of the page
+        const fill = document.getElementById('progress-fill');
+        const car = document.getElementById('progress-car');
         if (fill) fill.style.width = (scrollState.progress * 100) + '%';
         if (car) {
             car.style.left = `calc(${(scrollState.progress * 100).toFixed(2)}% - ${(scrollState.progress * 44).toFixed(0)}px)`;
-            wheels.forEach(w => { w.style.transform = `rotate(${(y * 1.4) % 360}deg)`; });
+            car.querySelectorAll('.pwheel').forEach(w => {
+                w.style.transform = `rotate(${(y * 1.4) % 360}deg)`;
+            });
         }
-
-        // Hero parallax: the poster cruises up and fades as you leave
-        if (heroContent) {
-            const p = Math.min(y / Math.max(window.innerHeight, 1), 1);
-            heroContent.style.transform = `translateY(${(-p * 80).toFixed(1)}px)`;
-            heroContent.style.opacity = String(Math.max(0, 1 - p * 1.3));
-        }
-
-        // Ghost type drifts slower than the page — cheap depth
-        if (ghost) ghost.style.transform = `translateY(${(y * -0.06).toFixed(1)}px)`;
-    }
-
-    // Velocity skew: the grid leans into hard scrolls, then settles
-    function settle() {
-        requestAnimationFrame(settle);
-        if (reduceMotion || !collectionContainer) return;
-        scrollState.smoothVel += (scrollState.vel - scrollState.smoothVel) * 0.12;
-        scrollState.vel *= 0.86;
-        const skew = Math.max(-1.4, Math.min(1.4, scrollState.smoothVel * 0.03));
-        collectionContainer.style.transform = `skewY(${skew.toFixed(3)}deg)`;
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    settle();
 })();
 
 // =====================================================================
-//  THREE.JS BACKDROP — neon light trails behind the ENTIRE page.
-//  Mouse steers. Scroll dollies the camera and revs the trails.
+//  THREE.JS BACKDROP — sealed blister cards drifting through warm air,
+//  with a few escaped cars among them. Fixed behind the entire site:
+//  it sways with the mouse and flutters when you scroll.
 // =====================================================================
-(function initHero() {
+(function initBackdrop() {
     const canvas = document.getElementById('bg-canvas');
-    if (!canvas || typeof THREE === 'undefined') return; // no canvas, no circus
+    if (!canvas || typeof THREE === 'undefined') return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0d0e12, 16, 66);
+    // Fog toward paper-cream so depth fades into the page colour
+    scene.fog = new THREE.Fog(0xf6f2ea, 16, 38);
 
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(0, 0, 20);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+    // Soft daylight
+    scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+    const sun = new THREE.DirectionalLight(0xfff2dd, 0.7);
+    sun.position.set(6, 10, 8);
+    scene.add(sun);
+
     const world = new THREE.Group();
     scene.add(world);
 
-    // ---------- Synthwave horizon ----------
-    const grid = new THREE.GridHelper(160, 80, 0x27304a, 0x151a26);
-    grid.position.y = -5;
-    world.add(grid);
+    // Feel-good palette: tomato, marigold, sage, dusty blue, blush, cream, ink
+    const TILE_COLORS = [0xe8552e, 0xf2b135, 0x7ba98c, 0x6d8cb3, 0xe5b8a5, 0xefe6d8, 0x2a2522];
 
-    // ---------- The light trails ----------
-    const PALETTE = [0xff5a1f, 0xffc400, 0x2f7bff, 0xff5a1f, 0x2dd4a7, 0xff3b3b];
-    const TRAILS = [];
-    const TAIL = 16;
-    const cometGeo = new THREE.SphereGeometry(0.24, 10, 10);
+    // ---------- Floating blister cards ----------
+    const tiles = [];
+    const tileGeo = new THREE.BoxGeometry(1.0, 1.36, 0.06);   // portrait, like the real thing
+    const bubbleGeo = new THREE.SphereGeometry(0.24, 12, 12); // the blister bubble
 
-    for (let j = 0; j < 6; j++) {
-        const pts = [];
-        const depth = -3 - j * 2.4;
-        const amp = 2.2 + (j % 3) * 1.1;
-        const phase = j * 1.9;
-        for (let k = 0; k <= 7; k++) {
-            const x = -34 + k * (68 / 7);
-            const y = 2.8 + Math.sin(phase + k * 0.85) * amp + j * 0.55;
-            const z = depth + Math.cos(phase * 0.7 + k * 0.6) * 2.6;
-            pts.push(new THREE.Vector3(x, y, z));
-        }
-        const curve = new THREE.CatmullRomCurve3(pts);
+    for (let i = 0; i < 34; i++) {
+        const color = TILE_COLORS[i % TILE_COLORS.length];
+        const tile = new THREE.Group();
 
-        // Permanent ribbon so the path reads even between comets…
-        const tube = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 90, 0.04, 6, false),
-            new THREE.MeshBasicMaterial({
-                color: PALETTE[j], transparent: true, opacity: 0.3,
-                blending: THREE.AdditiveBlending, depthWrite: false,
+        const cardMesh = new THREE.Mesh(
+            tileGeo,
+            new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.05 })
+        );
+        tile.add(cardMesh);
+
+        // A little clear-ish bubble on the front — sealed forever
+        const bubble = new THREE.Mesh(
+            bubbleGeo,
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff, roughness: 0.15, metalness: 0.1,
+                transparent: true, opacity: 0.35,
             })
         );
-        world.add(tube);
-        // …plus a wide soft halo for that neon bloom feel
-        const halo = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 60, 0.16, 6, false),
-            new THREE.MeshBasicMaterial({
-                color: PALETTE[j], transparent: true, opacity: 0.06,
-                blending: THREE.AdditiveBlending, depthWrite: false,
-            })
+        bubble.scale.set(1, 1, 0.55);
+        bubble.position.set(0, -0.12, 0.05);
+        tile.add(bubble);
+
+        tile.position.set(
+            (Math.random() - 0.5) * 34,
+            (Math.random() - 0.5) * 20,
+            -2 - Math.random() * 9
         );
-        world.add(halo);
+        tile.rotation.set(
+            (Math.random() - 0.5) * 0.7,
+            (Math.random() - 0.5) * 1.2,
+            (Math.random() - 0.5) * 0.5
+        );
 
-        const segs = [];
-        for (let i = 0; i < TAIL; i++) {
-            const m = new THREE.Mesh(
-                cometGeo,
-                new THREE.MeshBasicMaterial({
-                    color: PALETTE[j],
-                    transparent: true,
-                    opacity: Math.pow(1 - i / TAIL, 1.6) * 0.95,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                })
-            );
-            m.scale.setScalar(1 - (i / TAIL) * 0.75);
-            world.add(m);
-            segs.push(m);
-        }
-
-        TRAILS.push({
-            curve, segs,
-            head: Math.random(),
-            speed: 0.045 + Math.random() * 0.05,
+        world.add(tile);
+        tiles.push({
+            mesh: tile,
+            baseY: tile.position.y,
+            phase: Math.random() * Math.PI * 2,
+            bob: 0.25 + Math.random() * 0.3,
+            spin: (Math.random() - 0.5) * 0.0035,
         });
     }
 
-    // ---------- Distant embers ----------
-    const starGeo = new THREE.BufferGeometry();
-    const starCount = 200;
-    const positions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount * 3; i += 3) {
-        positions[i]     = (Math.random() - 0.5) * 90;
-        positions[i + 1] = (Math.random() - 0.5) * 40 + 6;
-        positions[i + 2] = (Math.random() - 0.5) * 50 - 8;
-    }
-    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const stars = new THREE.Points(
-        starGeo,
-        new THREE.PointsMaterial({ color: 0xff8a50, size: 0.07, transparent: true, opacity: 0.45 })
-    );
-    scene.add(stars);
+    // ---------- A few escaped cars, drifting free ----------
+    function buildMiniCar(color) {
+        const car = new THREE.Group();
+        const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.4 });
+        const dark  = new THREE.MeshStandardMaterial({ color: 0x2a2522, roughness: 0.7 });
 
-    // ---------- Mouse steering + resize ----------
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.26, 0.55), paint);
+        car.add(body);
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.22, 0.46), dark);
+        cabin.position.set(-0.05, 0.22, 0);
+        car.add(cabin);
+        [[0.4, 0.3], [0.4, -0.3], [-0.4, 0.3], [-0.4, -0.3]].forEach(([x, z]) => {
+            const w = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 14), dark);
+            w.rotation.x = Math.PI / 2;
+            w.position.set(x, -0.14, z);
+            car.add(w);
+        });
+        car.scale.setScalar(0.85);
+        return car;
+    }
+
+    const minis = [];
+    [0xe8552e, 0x6d8cb3, 0x7ba98c, 0xf2b135, 0xe5b8a5].forEach((c, i) => {
+        const m = buildMiniCar(c);
+        m.position.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 16, -3 - Math.random() * 7);
+        m.rotation.set(Math.random() * 0.6, Math.random() * Math.PI * 2, Math.random() * 0.4);
+        world.add(m);
+        minis.push({
+            mesh: m,
+            baseY: m.position.y,
+            phase: i * 1.3,
+            spin: 0.002 + Math.random() * 0.003,
+        });
+    });
+
+    // ---------- Mouse sway + resize ----------
     const mouse = { x: 0, y: 0 };
     window.addEventListener('mousemove', (e) => {
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -234,32 +225,50 @@ const scrollState = { y: 0, progress: 0, boost: 0, vel: 0, smoothVel: 0 };
         resize();
 
         const t = clock.getElapsedTime();
-        const rev = 1 + scrollState.boost;           // scroll = throttle
-        scrollState.boost *= 0.94;                    // ease back off
+        const stir = 1 + scrollState.boost * 2;   // scroll stirs the air
+        scrollState.boost *= 0.95;
 
         if (!reduceMotion) {
-            TRAILS.forEach((tr) => {
-                tr.head = (tr.head + tr.speed * rev * 0.016) % 1;
-                for (let i = 0; i < TAIL; i++) {
-                    let u = tr.head - i * 0.007 * (0.7 + rev * 0.3);
-                    u = ((u % 1) + 1) % 1;
-                    tr.segs[i].position.copy(tr.curve.getPointAt(u));
-                }
+            tiles.forEach(tl => {
+                tl.mesh.position.y = tl.baseY + Math.sin(t * 0.5 + tl.phase) * tl.bob;
+                tl.mesh.rotation.y += tl.spin * stir;
+                tl.mesh.rotation.x += tl.spin * 0.4 * stir;
             });
-            world.rotation.y = Math.sin(t * 0.1) * 0.05 + scrollState.progress * 0.7;
-            stars.rotation.y = t * 0.008;
+            minis.forEach(mn => {
+                mn.mesh.position.y = mn.baseY + Math.sin(t * 0.4 + mn.phase) * 0.4;
+                mn.mesh.rotation.y += mn.spin * stir;
+            });
         }
 
-        // Scrolling the page descends the camera through the trail field
-        const p = scrollState.progress;
-        camera.position.x = mouse.x * 2.4;
-        camera.position.y = 3.4 - mouse.y * 1.4 - p * 4.2;
-        camera.position.z = 20 - p * 7;
-        camera.lookAt(0, 2.6 - p * 3.4, -6);
+        // The whole field leans with the cursor and drifts with scroll
+        world.rotation.y += ((mouse.x * 0.1) - world.rotation.y) * 0.03;
+        world.rotation.x += ((-mouse.y * 0.06) - world.rotation.x) * 0.03;
+        world.position.y = scrollState.y * 0.0012;
 
         renderer.render(scene, camera);
     }
     animate();
+})();
+
+// =====================================================================
+//  REVEAL ON SCROLL — sections and cards glide in as they arrive
+// =====================================================================
+const globalRevealObserver = (() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+        document.querySelectorAll('[data-reveal]').forEach(el => el.classList.add('visible'));
+        return null;
+    }
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('[data-reveal]').forEach(el => obs.observe(el));
+    return obs;
 })();
 
 // =====================================================================
@@ -279,7 +288,7 @@ function countUp(el, target, isMoney) {
 }
 
 // =====================================================================
-//  CARD RENDERING — uniform modules, whole car always visible
+//  CARD RENDERING — one frame, one ratio, every image the same size
 // =====================================================================
 
 /**
@@ -299,17 +308,16 @@ function createCarCard(car, index) {
     return `
         <div class="car-card-container reveal" data-index="${index}" style="--i:${index % 12}" tabindex="0" role="button" aria-label="View ${car["Car Model"]}">
             <div class="card-shell">
+                <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
                 <div class="image-container">
-                    <span class="card-number">#${String(index + 1).padStart(2, '0')}</span>
-                    <span class="seal-badge" title="Mint On Card. Obviously.">MOC ✓</span>
                     <img src="${finalImageUrl}" alt="${car["Car Model"]}" loading="lazy"
                          onerror="this.onerror=null;this.src='https://placehold.co/600x800?text=${encodeURIComponent(car["Car Model"])}';">
                 </div>
                 <div class="card-meta">
-                    <h3 class="car-name">${car["Car Model"]}</h3>
+                    <h2 class="car-name">${car["Car Model"]}</h2>
                     <div class="card-row">
                         <span class="price-chip">${paidChip}</span>
-                        <span class="card-cta">spec sheet →</span>
+                        <span class="card-cta">details →</span>
                     </div>
                 </div>
             </div>
@@ -334,31 +342,37 @@ function observeReveals() {
                 revealObserver.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
     items.forEach(el => revealObserver.observe(el));
 }
 
-// Cursor spotlight: cards glow where you point at them
-function attachSpotlight(cardEl) {
+// Gentle tilt: the card leans toward the cursor, politely
+function attachTilt(cardEl) {
+    const shell = cardEl.querySelector('.card-shell');
     cardEl.addEventListener('mousemove', (e) => {
         const rect = cardEl.getBoundingClientRect();
-        cardEl.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
-        cardEl.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        shell.style.transform =
+            `translateY(-8px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg)`;
+    });
+    cardEl.addEventListener('mouseleave', () => {
+        shell.style.transform = '';
     });
 }
 
 // =====================================================================
-//  MODAL — whitelisted spec sheet. Price Acquired only, nothing leaks.
+//  MODAL — the spec sheet (valuations stay in the vault's back office)
 // =====================================================================
 const TAGLINES = [
-    'Certified shelf royalty.',
-    'Does 0–60 in one wrist flick. Theoretically. It\'s sealed.',
-    'Undefeated on the dining table circuit.',
-    'Mint on card. Monk-level restraint.',
-    'Chosen over groceries at least once.',
-    'Loud paint, louder personality.',
-    'Never touched grass. Or floor. Or air.',
-    'The pegs never saw it coming.',
+    'Factory sealed. Emotionally unsealed.',
+    'Never opened. Frequently admired.',
+    'The blister IS the display case.',
+    'Zero miles — all of them imaginary.',
+    'Guarded like the last samosa.',
+    'Card intact. Corners feared for daily.',
+    'Peg-hunted at dawn. Worth it.',
+    'Museum rules: look, don\'t unclip.',
 ];
 
 function openModal(car) {
@@ -372,20 +386,24 @@ function openModal(car) {
     for (let i = 0; i < name.length; i++) seed += name.charCodeAt(i);
     modalVerdict.textContent = TAGLINES[seed % TAGLINES.length];
 
-    // WHITELIST: only these rows ever render, no matter what the sheet holds
-    const rows = [];
-    const paid = parseCurrency(car["Price Acquired"]);
-    if (paid > 0) rows.push(['Price acquired', formatter.format(paid)]);
-    rows.push(['Condition', 'Sealed — Mint On Card']);
-    rows.push(['Scale', '1:64']);
+    // Spec rows: everything from the sheet EXCEPT private or already-shown fields
+    const skip = new Set(['Car Model', 'link', 'info', ...PRIVATE_COLUMNS]);
+    let specsHTML = '';
+    Object.keys(car).forEach((key) => {
+        const value = (car[key] || '').toString().trim();
+        if (skip.has(key) || !value || value === '-') return;
+        const isMoneyCol = key === 'Price Acquired';
+        const val = isMoneyCol ? formatter.format(parseCurrency(value)) : value;
+        specsHTML += `
+            <div class="spec-row">
+                <span class="spec-key">${key}</span>
+                <span class="spec-val">${val}</span>
+            </div>`;
+    });
+    modalSpecs.innerHTML = specsHTML;
 
-    modalSpecs.innerHTML = rows.map(([k, v]) => `
-        <div class="spec-row">
-            <span class="spec-key">${k}</span>
-            <span class="spec-val">${v}</span>
-        </div>`).join('');
-
-    modalInfo.textContent = car.info || '';
+    const infoTxt = (car.info || '').toString().trim();
+    modalInfo.textContent = infoTxt === '-' ? '' : infoTxt;
 
     modalBackdrop.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -431,11 +449,11 @@ function updateLineupCount(shown) {
     if (!lineupCount) return;
     const total = allCars.length;
     if (shown === total) {
-        lineupCount.textContent = `All ${total} legends, present and polished.`;
+        lineupCount.textContent = `All ${total} sealed legends, on display.`;
     } else if (shown === 0) {
         lineupCount.textContent = `0 of ${total}. The vault denies everything.`;
     } else {
-        lineupCount.textContent = `${shown} of ${total} answered the call.`;
+        lineupCount.textContent = `${shown} of ${total} made the cut.`;
     }
 }
 
@@ -451,7 +469,7 @@ function renderCards() {
 
     // Wire up interactions after the HTML lands
     collectionContainer.querySelectorAll('.car-card-container').forEach((cardEl, i) => {
-        attachSpotlight(cardEl);
+        attachTilt(cardEl);
         const open = () => openModal(list[i]);
         cardEl.addEventListener('click', open);
         cardEl.addEventListener('keydown', (e) => {
@@ -480,7 +498,7 @@ async function fetchAndRenderCars() {
     collectionContainer.innerHTML = `
         <div class="loading-state">
             <div class="loading-wheel"></div>
-            <p>Unlocking the vault…</p>
+            <p>Rolling the vault door open…</p>
         </div>`;
 
     try {

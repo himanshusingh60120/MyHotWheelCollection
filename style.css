@@ -120,8 +120,8 @@ h1 em {
 
 .bento {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
     margin-top: 52px;
     text-align: left;
 }
@@ -134,11 +134,21 @@ h1 em {
     gap: 4px;
     box-shadow: var(--shadow);
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.3, 1), box-shadow 0.3s ease;
+    animation: tile-float 6s ease-in-out infinite;
+}
+
+.tile:nth-child(2) { animation-delay: -2s; }
+.tile:nth-child(3) { animation-delay: -4s; }
+
+@keyframes tile-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
 }
 
 .tile:hover {
-    transform: translateY(-6px) rotate(-0.4deg);
+    transform: translateY(-8px) rotate(-0.4deg) scale(1.015);
     box-shadow: var(--shadow-lift);
+    animation-play-state: paused;
 }
 
 .tile-accent { background: var(--accent); color: #fff7ef; }
@@ -346,7 +356,7 @@ h1 em {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 20px;
-    padding: 12px 12px 14px;
+    padding: 10px 10px 12px;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -362,6 +372,36 @@ h1 em {
     box-shadow: var(--shadow-lift);
 }
 
+/* A soft light sweeps diagonally across the card as you arrive */
+.card-shell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 60%;
+    height: 100%;
+    z-index: 4;
+    pointer-events: none;
+    background: linear-gradient(
+        105deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 100%
+    );
+    transform: translateX(-180%) skewX(-18deg);
+    opacity: 0;
+}
+
+.car-card-container:hover .card-shell::before {
+    animation: card-sheen 0.85s cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+@keyframes card-sheen {
+    0% { transform: translateX(-180%) skewX(-18deg); opacity: 0; }
+    18% { opacity: 1; }
+    100% { transform: translateX(320%) skewX(-18deg); opacity: 0; }
+}
+
 .car-card-container:focus-visible .card-shell {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -371,7 +411,7 @@ h1 em {
     position: absolute;
     top: 20px;
     left: 20px;
-    z-index: 3;
+    z-index: 5;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     font-weight: 700;
@@ -380,42 +420,57 @@ h1 em {
     padding: 3px 9px;
     border-radius: 999px;
     transform: rotate(-3deg);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+}
+
+.car-card-container:hover .card-number {
+    transform: rotate(0deg) scale(1.08);
+    background: var(--accent);
 }
 
 /*  THE FRAME.
     Fixed 3:4 portrait ratio for every single card.
     The photos have white backgrounds, the frame is white —
-    so every car appears the same size, floating on the same paper. */
+    so every car appears the same size, floating on the same paper.
+
+    THE SYSTEM: one fixed square frame + object-fit: contain + equal padding.
+    - Fixed 1:1 box → every card is the same height. No exceptions.
+    - contain → the WHOLE car is always visible. Nothing is ever cut off.
+    - equal padding → identical breathing room, so images normalize into
+      the same box whatever their native aspect ratio.
+    White photos on a white frame means the letterboxing is invisible. */
 .image-container {
     width: 100%;
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 1 / 1;
     border-radius: 14px;
     background: #ffffff;
     border: 1px solid var(--line);
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
 }
 
-/* cover = the photo fills the whole frame identically on every card.
-   White-background images blend into the white frame, so the crop is invisible
-   and every car reads at the same scale in the same area. */
 .image-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     display: block;
-    transition: transform 0.4s cubic-bezier(0.22, 1, 0.3, 1);
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.3, 1);
 }
 
 .car-card-container:hover .image-container img {
-    transform: scale(1.025);
+    transform: scale(1.04) translateY(-2px);
 }
 
 .card-meta {
-    padding: 12px 8px 2px;
+    padding: 10px 8px 2px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     flex: 1;
 }
 
@@ -423,13 +478,18 @@ h1 em {
     margin: 0;
     font-family: 'Fraunces', serif;
     font-weight: 700;
-    font-size: 1.18rem;
+    font-size: 1.08rem;
     letter-spacing: -0.01em;
     color: var(--ink);
-    line-height: 1.15;
+    line-height: 1.12;
     position: relative;
     display: inline-block;
     align-self: flex-start;
+    /* keep names to two lines so every card is the same height */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* Underline draws itself in on hover */
@@ -455,6 +515,8 @@ h1 em {
 }
 
 .price-chip {
+    position: relative;
+    overflow: hidden;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     font-weight: 700;
@@ -464,6 +526,29 @@ h1 em {
     padding: 4px 10px;
     border-radius: 999px;
     white-space: nowrap;
+    transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.car-card-container:hover .price-chip {
+    background: rgba(232, 85, 46, 0.16);
+    transform: translateY(-1px);
+}
+
+/* a little light streaks through the chip on hover */
+.price-chip::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+    transform: translateX(-120%);
+}
+
+.car-card-container:hover .price-chip::after {
+    animation: chip-shine 0.7s ease 0.1s;
+}
+
+@keyframes chip-shine {
+    to { transform: translateX(120%); }
 }
 
 .card-cta {
@@ -477,7 +562,7 @@ h1 em {
 
 .car-card-container:hover .card-cta {
     color: var(--accent);
-    transform: translateX(3px);
+    transform: translateX(4px);
 }
 
 /* ============ LOADING / EMPTY / ERROR ============ */

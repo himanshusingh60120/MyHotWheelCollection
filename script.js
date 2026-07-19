@@ -163,6 +163,7 @@ const scrollState = { y: 0, progress: 0, boost: 0 };
             phase: Math.random() * Math.PI * 2,
             bob: 0.25 + Math.random() * 0.3,
             spin: (Math.random() - 0.5) * 0.0035,
+            drift: (0.004 + Math.random() * 0.008) * (Math.random() < 0.5 ? 1 : -1),
         });
     }
 
@@ -198,6 +199,7 @@ const scrollState = { y: 0, progress: 0, boost: 0 };
             baseY: m.position.y,
             phase: i * 1.3,
             spin: 0.002 + Math.random() * 0.003,
+            drift: (0.01 + Math.random() * 0.012) * (Math.random() < 0.5 ? 1 : -1),
         });
     });
 
@@ -231,11 +233,20 @@ const scrollState = { y: 0, progress: 0, boost: 0 };
         if (!reduceMotion) {
             tiles.forEach(tl => {
                 tl.mesh.position.y = tl.baseY + Math.sin(t * 0.5 + tl.phase) * tl.bob;
+                // slow lateral drift; wrap around so the field never empties
+                tl.mesh.position.x += tl.drift * stir;
+                if (tl.mesh.position.x > 19) tl.mesh.position.x = -19;
+                if (tl.mesh.position.x < -19) tl.mesh.position.x = 19;
                 tl.mesh.rotation.y += tl.spin * stir;
                 tl.mesh.rotation.x += tl.spin * 0.4 * stir;
+                // a gentle breathing sway on the roll axis
+                tl.mesh.rotation.z = Math.sin(t * 0.3 + tl.phase) * 0.12;
             });
             minis.forEach(mn => {
                 mn.mesh.position.y = mn.baseY + Math.sin(t * 0.4 + mn.phase) * 0.4;
+                mn.mesh.position.x += mn.drift * stir;
+                if (mn.mesh.position.x > 17) mn.mesh.position.x = -17;
+                if (mn.mesh.position.x < -17) mn.mesh.position.x = 17;
                 mn.mesh.rotation.y += mn.spin * stir;
             });
         }
